@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Aivora - AI-Powered Goal Achievement",
   description: "AI-powered goal planning and progress tracking",
   icons: {
-    icon: '/favicon.svg',
+    icon: "/favicon.svg",
   },
 };
 

@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { User } from '@/types';
-import api from '@/lib/api';
+import { create } from "zustand";
+import { User } from "@/types";
+import api from "@/lib/api";
 
 interface AuthState {
   user: User | null;
@@ -23,8 +23,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   initialize: () => {
     // Check if token exists in localStorage on app initialization
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("auth_token");
       if (token) {
         api.setToken(token);
         // Verify token by fetching user
@@ -37,13 +37,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ isLoading: true, error: null });
       const data = await api.login({ email, password });
-      
+
       // Store token in localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('auth_user', JSON.stringify(data.user));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("auth_token", data.token);
+        localStorage.setItem("auth_user", JSON.stringify(data.user));
       }
-      
+
       api.setToken(data.token);
       set({
         user: data.user,
@@ -53,7 +53,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
       set({
-        error: err.response?.data?.error || 'Login failed',
+        error: err.response?.data?.error || "Login failed",
         isLoading: false,
       });
       throw error;
@@ -64,13 +64,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ isLoading: true, error: null });
       const data = await api.register({ name, email, password });
-      
+
       // Store token in localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('auth_user', JSON.stringify(data.user));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("auth_token", data.token);
+        localStorage.setItem("auth_user", JSON.stringify(data.user));
       }
-      
+
       api.setToken(data.token);
       set({
         user: data.user,
@@ -80,7 +80,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
       set({
-        error: err.response?.data?.error || 'Registration failed',
+        error: err.response?.data?.error || "Registration failed",
         isLoading: false,
       });
       throw error;
@@ -89,12 +89,12 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     // Clear localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("auth_user");
     }
-    
-    api.setToken('');
+
+    api.setToken("");
     set({
       user: null,
       isAuthenticated: false,
@@ -102,9 +102,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkAuth: async () => {
-    if (typeof window === 'undefined') return;
-    
-    const token = localStorage.getItem('auth_token');
+    if (typeof window === "undefined") return;
+
+    const token = localStorage.getItem("auth_token");
     if (!token) {
       set({ isAuthenticated: false, user: null });
       return;
@@ -113,19 +113,19 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       api.setToken(token);
       const data = await api.getMe();
-      
+
       // Update user in localStorage
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
-      
+      localStorage.setItem("auth_user", JSON.stringify(data.user));
+
       set({
         user: data.user,
         isAuthenticated: true,
       });
     } catch {
       // Token is invalid, clear everything
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
-      api.setToken('');
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("auth_user");
+      api.setToken("");
       set({
         user: null,
         isAuthenticated: false,

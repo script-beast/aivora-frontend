@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { Goal, Progress, ProgressStats, Insight } from '@/types';
-import api from '@/lib/api';
+import { create } from "zustand";
+import { Goal, Progress, ProgressStats, Insight } from "@/types";
+import api from "@/lib/api";
 
 interface GoalState {
   goals: Goal[];
@@ -10,7 +10,7 @@ interface GoalState {
   insights: Insight[];
   isLoading: boolean;
   error: string | null;
-  
+
   // Goal actions
   fetchGoals: (status?: string) => Promise<void>;
   fetchGoal: (id: string) => Promise<void>;
@@ -18,16 +18,16 @@ interface GoalState {
   updateGoal: (id: string, data: any) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
   regeneratePlan: (id: string, feedback?: string) => Promise<void>;
-  
+
   // Progress actions
   fetchProgress: (goalId: string) => Promise<void>;
   fetchStats: (goalId: string) => Promise<void>;
   updateProgress: (data: any) => Promise<void>;
-  
+
   // Insight actions
   fetchInsights: (goalId: string) => Promise<void>;
   generateInsights: (goalId: string) => Promise<void>;
-  
+
   clearError: () => void;
   setCurrentGoal: (goal: Goal | null) => void;
 }
@@ -48,7 +48,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       set({ goals: data.goals, isLoading: false });
     } catch (error: any) {
       set({
-        error: error.response?.data?.error || 'Failed to fetch goals',
+        error: error.response?.data?.error || "Failed to fetch goals",
         isLoading: false,
       });
     }
@@ -61,7 +61,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       set({ currentGoal: data.goal, isLoading: false });
     } catch (error: any) {
       set({
-        error: error.response?.data?.error || 'Failed to fetch goal',
+        error: error.response?.data?.error || "Failed to fetch goal",
         isLoading: false,
       });
     }
@@ -79,7 +79,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       return response.goal;
     } catch (error: any) {
       set({
-        error: error.response?.data?.error || 'Failed to create goal',
+        error: error.response?.data?.error || "Failed to create goal",
         isLoading: false,
       });
       throw error;
@@ -92,12 +92,13 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       const response = await api.updateGoal(id, data);
       set((state) => ({
         goals: state.goals.map((g) => (g._id === id ? response.goal : g)),
-        currentGoal: state.currentGoal?._id === id ? response.goal : state.currentGoal,
+        currentGoal:
+          state.currentGoal?._id === id ? response.goal : state.currentGoal,
         isLoading: false,
       }));
     } catch (error: any) {
       set({
-        error: error.response?.data?.error || 'Failed to update goal',
+        error: error.response?.data?.error || "Failed to update goal",
         isLoading: false,
       });
       throw error;
@@ -115,7 +116,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       }));
     } catch (error: any) {
       set({
-        error: error.response?.data?.error || 'Failed to delete goal',
+        error: error.response?.data?.error || "Failed to delete goal",
         isLoading: false,
       });
       throw error;
@@ -128,12 +129,13 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       const response = await api.regenerateGoalPlan(id, feedback);
       set((state) => ({
         goals: state.goals.map((g) => (g._id === id ? response.goal : g)),
-        currentGoal: state.currentGoal?._id === id ? response.goal : state.currentGoal,
+        currentGoal:
+          state.currentGoal?._id === id ? response.goal : state.currentGoal,
         isLoading: false,
       }));
     } catch (error: any) {
       set({
-        error: error.response?.data?.error || 'Failed to regenerate plan',
+        error: error.response?.data?.error || "Failed to regenerate plan",
         isLoading: false,
       });
       throw error;
@@ -147,7 +149,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       set({ progress: data.progress, isLoading: false });
     } catch (error: any) {
       set({
-        error: error.response?.data?.error || 'Failed to fetch progress',
+        error: error.response?.data?.error || "Failed to fetch progress",
         isLoading: false,
       });
     }
@@ -158,7 +160,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       const data = await api.getProgressStats(goalId);
       set({ stats: data.stats });
     } catch (error: any) {
-      set({ error: error.response?.data?.error || 'Failed to fetch stats' });
+      set({ error: error.response?.data?.error || "Failed to fetch stats" });
     }
   },
 
@@ -167,22 +169,26 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       const response = await api.createProgress(data);
       set((state) => {
         const existing = state.progress.find(
-          (p) => p.goalId === data.goalId && p.day === data.day
+          (p) => p.goalId === data.goalId && p.day === data.day,
         );
         if (existing) {
           return {
             progress: state.progress.map((p) =>
-              p.goalId === data.goalId && p.day === data.day ? response.progress : p
+              p.goalId === data.goalId && p.day === data.day
+                ? response.progress
+                : p,
             ),
           };
         }
         return { progress: [...state.progress, response.progress] };
       });
-      
+
       // Refresh stats
       await get().fetchStats(data.goalId);
     } catch (error: any) {
-      set({ error: error.response?.data?.error || 'Failed to update progress' });
+      set({
+        error: error.response?.data?.error || "Failed to update progress",
+      });
       throw error;
     }
   },
@@ -192,7 +198,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       const data = await api.getInsightsByGoal(goalId);
       set({ insights: data.insights });
     } catch (error: any) {
-      set({ error: error.response?.data?.error || 'Failed to fetch insights' });
+      set({ error: error.response?.data?.error || "Failed to fetch insights" });
     }
   },
 
@@ -206,7 +212,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       }));
     } catch (error: any) {
       set({
-        error: error.response?.data?.error || 'Failed to generate insights',
+        error: error.response?.data?.error || "Failed to generate insights",
         isLoading: false,
       });
       throw error;

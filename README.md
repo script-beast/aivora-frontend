@@ -45,6 +45,7 @@ frontend/
 ## 🎨 Features
 
 ### ✨ User Interface
+
 - **Glassmorphism Design** - Modern frosted glass aesthetic
 - **Smooth Animations** - Framer Motion powered transitions
 - **Responsive Layout** - Mobile-first design
@@ -52,12 +53,14 @@ frontend/
 - **Dark Text Inputs** - Fully visible input fields
 
 ### 🔐 Authentication
+
 - **Secure Login/Register** - JWT token-based auth
 - **Persistent Sessions** - LocalStorage with auto-refresh
 - **Protected Routes** - Automatic redirect to login
 - **Token Management** - Auto-sync across app refresh
 
 ### 📊 Goal Management
+
 - **AI-Powered Planning** - 30-day structured roadmaps
 - **Progress Tracking** - Daily task completion
 - **Sentiment Analysis** - AI analyzes your mood
@@ -65,6 +68,7 @@ frontend/
 - **PDF Export** - Professional progress reports
 
 ### 🤖 AI Features
+
 - **Goal Planner** - Generates personalized roadmaps
 - **Insight Analyzer** - Weekly progress insights
 - **Plan Regeneration** - Adaptive roadmap updates
@@ -73,29 +77,34 @@ frontend/
 ## ⚙️ Installation
 
 ### Prerequisites
-- Node.js 18+ 
+
+- Node.js 18+
 - npm or yarn
 - Backend API running (see backend README)
 
 ### Setup
 
 1. **Install dependencies**:
+
 ```bash
 npm install
 ```
 
 2. **Configure environment**:
-Create `.env.local` file:
+   Create `.env.local` file:
+
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
 ```
 
 3. **Run development server**:
+
 ```bash
 npm run dev
 ```
 
 4. **Build for production**:
+
 ```bash
 npm run build
 npm start
@@ -105,13 +114,14 @@ npm start
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
+| Variable              | Description     | Default                     |
+| --------------------- | --------------- | --------------------------- |
 | `NEXT_PUBLIC_API_URL` | Backend API URL | `http://localhost:5000/api` |
 
 ### API Client
 
 The API client (`src/lib/api.ts`) includes:
+
 - **Automatic token injection** from localStorage
 - **401 error handling** with redirect
 - **Request/response interceptors**
@@ -120,14 +130,18 @@ The API client (`src/lib/api.ts`) includes:
 ## 📚 Key Components
 
 ### AuthProvider
+
 Initializes authentication state on app load:
+
 ```tsx
 // Wraps entire app in layout.tsx
 <AuthProvider>{children}</AuthProvider>
 ```
 
 ### ProgressModal
+
 Reusable modal for tracking daily progress:
+
 - Task completion toggle
 - Hours spent tracking
 - Notes with sentiment analysis
@@ -136,6 +150,7 @@ Reusable modal for tracking daily progress:
 ### State Management
 
 **Auth Store** (`authStore.ts`):
+
 ```typescript
 - user: User | null
 - isAuthenticated: boolean
@@ -146,6 +161,7 @@ Reusable modal for tracking daily progress:
 ```
 
 **Goal Store** (`goalStore.ts`):
+
 ```typescript
 - goals: Goal[]
 - progress: Progress[]
@@ -159,29 +175,32 @@ Reusable modal for tracking daily progress:
 ## 🎯 Usage Examples
 
 ### Creating a Goal
+
 ```typescript
 await createGoal({
   title: "Learn React",
   description: "Master React fundamentals",
   duration: 30,
-  hoursPerDay: 2
+  hoursPerDay: 2,
 });
 // AI generates 30-day roadmap automatically
 ```
 
 ### Tracking Progress
+
 ```typescript
 await updateProgress({
   goalId: "goal_id",
   day: 1,
   completed: true,
   hoursSpent: 2.5,
-  comment: "Great start! Completed setup."
+  comment: "Great start! Completed setup.",
 });
 // AI analyzes sentiment automatically
 ```
 
 ### Generating Insights
+
 ```typescript
 await generateInsights(goalId);
 // Returns: summary, mood trend, motivation level, blockers, recommendations
@@ -190,6 +209,7 @@ await generateInsights(goalId);
 ## 🎨 Styling
 
 ### Custom Scrollbars
+
 ```css
 /* Gradient purple scrollbar */
 ::-webkit-scrollbar-thumb {
@@ -198,6 +218,7 @@ await generateInsights(goalId);
 ```
 
 ### Glass Effect
+
 ```css
 .glass {
   @apply bg-white/70 backdrop-blur-md border border-white/20;
@@ -205,6 +226,7 @@ await generateInsights(goalId);
 ```
 
 ### Modal Scrollbar
+
 ```css
 /* Thinner, subtle scrollbar for modals */
 .modal-scroll::-webkit-scrollbar {
@@ -224,12 +246,14 @@ await generateInsights(goalId);
 ## 🚀 Deployment
 
 ### Vercel (Recommended)
+
 ```bash
 npm run build
 vercel --prod
 ```
 
 ### Docker
+
 ```dockerfile
 FROM node:18-alpine
 WORKDIR /app
@@ -242,6 +266,7 @@ CMD ["npm", "start"]
 ```
 
 ### Environment Variables in Production
+
 Ensure `NEXT_PUBLIC_API_URL` points to your production backend.
 
 ## 📊 Performance
@@ -254,15 +279,19 @@ Ensure `NEXT_PUBLIC_API_URL` points to your production backend.
 ## 🐛 Troubleshooting
 
 ### Issue: Logged out on refresh
+
 **Solution**: Check that `AuthProvider` is wrapping your app in `layout.tsx`
 
 ### Issue: API requests failing
+
 **Solution**: Verify `NEXT_PUBLIC_API_URL` is set correctly
 
 ### Issue: Input text not visible
+
 **Solution**: All inputs now have `text-gray-900` class
 
 ### Issue: Charts not rendering
+
 **Solution**: Ensure `recharts` is installed: `npm install recharts`
 
 ## 🤝 Contributing

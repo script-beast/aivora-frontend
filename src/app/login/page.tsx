@@ -1,27 +1,29 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
-import { useAuthStore } from '@/store/authStore';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { motion } from "framer-motion";
+import { Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, isAuthenticated, error: authError } = useAuthStore();
-  
+
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+    {},
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
   }, [isAuthenticated, router]);
 
@@ -29,13 +31,13 @@ export default function LoginPage() {
     const newErrors: { email?: string; password?: string } = {};
 
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Invalid email address';
+      newErrors.email = "Invalid email address";
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
     }
 
     setErrors(newErrors);
@@ -44,7 +46,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -52,7 +54,7 @@ export default function LoginPage() {
       await login(formData.email, formData.password);
       // Navigation handled by useEffect
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -68,10 +70,10 @@ export default function LoginPage() {
         >
           {/* Logo */}
           <Link href="/" className="flex items-center justify-center mb-8">
-            <Image 
-              src="/logo-text.svg" 
-              alt="Aivora Logo" 
-              width={180} 
+            <Image
+              src="/logo-text.svg"
+              alt="Aivora Logo"
+              width={180}
               height={54}
               priority
             />
@@ -80,7 +82,9 @@ export default function LoginPage() {
           {/* Login Card */}
           <div className="glass rounded-2xl shadow-xl p-8">
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Welcome Back
+              </h1>
               <p className="text-gray-600">Sign in to continue your journey</p>
             </div>
 
@@ -99,7 +103,10 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email Field */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Email Address
                 </label>
                 <div className="relative">
@@ -108,11 +115,13 @@ export default function LoginPage() {
                     type="email"
                     id="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition text-gray-900 ${
                       errors.email
-                        ? 'border-red-300 focus:ring-red-500'
-                        : 'border-gray-300 focus:ring-indigo-500'
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-indigo-500"
                     }`}
                     placeholder="you@example.com"
                   />
@@ -124,7 +133,10 @@ export default function LoginPage() {
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Password
                 </label>
                 <div className="relative">
@@ -133,11 +145,13 @@ export default function LoginPage() {
                     type="password"
                     id="password"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition text-gray-900 ${
                       errors.password
-                        ? 'border-red-300 focus:ring-red-500'
-                        : 'border-gray-300 focus:ring-indigo-500'
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-indigo-500"
                     }`}
                     placeholder="Enter your password"
                   />
@@ -170,7 +184,7 @@ export default function LoginPage() {
             {/* Register Link */}
             <div className="mt-6 text-center">
               <p className="text-gray-600">
-                Don&apos;t have an account?{' '}
+                Don&apos;t have an account?{" "}
                 <Link
                   href="/register"
                   className="text-indigo-600 hover:text-indigo-700 font-semibold transition"

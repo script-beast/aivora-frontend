@@ -1,22 +1,29 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { Mail, Lock, User, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
-import { useAuthStore } from '@/store/authStore';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { motion } from "framer-motion";
+import {
+  Mail,
+  Lock,
+  User,
+  ArrowRight,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { register, isAuthenticated, error: authError } = useAuthStore();
-  
+
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
   });
   const [errors, setErrors] = useState<{
     name?: string;
@@ -29,7 +36,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
   }, [isAuthenticated, router]);
 
@@ -37,7 +44,8 @@ export default function RegisterPage() {
     // Calculate password strength
     let strength = 0;
     if (formData.password.length >= 8) strength++;
-    if (/[a-z]/.test(formData.password) && /[A-Z]/.test(formData.password)) strength++;
+    if (/[a-z]/.test(formData.password) && /[A-Z]/.test(formData.password))
+      strength++;
     if (/[0-9]/.test(formData.password)) strength++;
     if (/[^A-Za-z0-9]/.test(formData.password)) strength++;
     setPasswordStrength(strength);
@@ -52,23 +60,23 @@ export default function RegisterPage() {
     } = {};
 
     if (!formData.name || formData.name.length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
+      newErrors.name = "Name must be at least 2 characters";
     }
 
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Invalid email address';
+      newErrors.email = "Invalid email address";
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = "Password must be at least 6 characters";
     }
 
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = "Passwords do not match";
     }
 
     setErrors(newErrors);
@@ -77,7 +85,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -85,26 +93,26 @@ export default function RegisterPage() {
       await register(formData.name, formData.email, formData.password);
       // Navigation handled by useEffect
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error("Registration error:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const getPasswordStrengthColor = () => {
-    if (passwordStrength === 0) return 'bg-gray-200';
-    if (passwordStrength === 1) return 'bg-red-500';
-    if (passwordStrength === 2) return 'bg-yellow-500';
-    if (passwordStrength === 3) return 'bg-blue-500';
-    return 'bg-green-500';
+    if (passwordStrength === 0) return "bg-gray-200";
+    if (passwordStrength === 1) return "bg-red-500";
+    if (passwordStrength === 2) return "bg-yellow-500";
+    if (passwordStrength === 3) return "bg-blue-500";
+    return "bg-green-500";
   };
 
   const getPasswordStrengthText = () => {
-    if (passwordStrength === 0) return '';
-    if (passwordStrength === 1) return 'Weak';
-    if (passwordStrength === 2) return 'Fair';
-    if (passwordStrength === 3) return 'Good';
-    return 'Strong';
+    if (passwordStrength === 0) return "";
+    if (passwordStrength === 1) return "Weak";
+    if (passwordStrength === 2) return "Fair";
+    if (passwordStrength === 3) return "Good";
+    return "Strong";
   };
 
   return (
@@ -117,10 +125,10 @@ export default function RegisterPage() {
         >
           {/* Logo */}
           <Link href="/" className="flex items-center justify-center mb-8">
-            <Image 
-              src="/logo-text.svg" 
-              alt="Aivora Logo" 
-              width={180} 
+            <Image
+              src="/logo-text.svg"
+              alt="Aivora Logo"
+              width={180}
               height={54}
               priority
             />
@@ -129,8 +137,12 @@ export default function RegisterPage() {
           {/* Register Card */}
           <div className="glass rounded-2xl shadow-xl p-8">
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-              <p className="text-gray-600">Start your goal achievement journey</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Create Account
+              </h1>
+              <p className="text-gray-600">
+                Start your goal achievement journey
+              </p>
             </div>
 
             {/* Error Alert */}
@@ -148,7 +160,10 @@ export default function RegisterPage() {
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Name Field */}
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Full Name
                 </label>
                 <div className="relative">
@@ -157,11 +172,13 @@ export default function RegisterPage() {
                     type="text"
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition text-gray-900 ${
                       errors.name
-                        ? 'border-red-300 focus:ring-red-500'
-                        : 'border-gray-300 focus:ring-indigo-500'
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-indigo-500"
                     }`}
                     placeholder="John Doe"
                   />
@@ -173,7 +190,10 @@ export default function RegisterPage() {
 
               {/* Email Field */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Email Address
                 </label>
                 <div className="relative">
@@ -182,11 +202,13 @@ export default function RegisterPage() {
                     type="email"
                     id="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition text-gray-900 ${
                       errors.email
-                        ? 'border-red-300 focus:ring-red-500'
-                        : 'border-gray-300 focus:ring-indigo-500'
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-indigo-500"
                     }`}
                     placeholder="you@example.com"
                   />
@@ -198,7 +220,10 @@ export default function RegisterPage() {
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Password
                 </label>
                 <div className="relative">
@@ -207,11 +232,13 @@ export default function RegisterPage() {
                     type="password"
                     id="password"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition text-gray-900 ${
                       errors.password
-                        ? 'border-red-300 focus:ring-red-500'
-                        : 'border-gray-300 focus:ring-indigo-500'
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-indigo-500"
                     }`}
                     placeholder="Create a strong password"
                   />
@@ -239,7 +266,10 @@ export default function RegisterPage() {
 
               {/* Confirm Password Field */}
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Confirm Password
                 </label>
                 <div className="relative">
@@ -248,20 +278,28 @@ export default function RegisterPage() {
                     type="password"
                     id="confirmPassword"
                     value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${
                       errors.confirmPassword
-                        ? 'border-red-300 focus:ring-red-500'
-                        : 'border-gray-300 focus:ring-indigo-500'
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-indigo-500"
                     }`}
                     placeholder="Confirm your password"
                   />
-                  {formData.confirmPassword && formData.password === formData.confirmPassword && (
-                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />
-                  )}
+                  {formData.confirmPassword &&
+                    formData.password === formData.confirmPassword && (
+                      <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />
+                    )}
                 </div>
                 {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.confirmPassword}
+                  </p>
                 )}
               </div>
 
@@ -288,7 +326,7 @@ export default function RegisterPage() {
             {/* Login Link */}
             <div className="mt-6 text-center">
               <p className="text-gray-600">
-                Already have an account?{' '}
+                Already have an account?{" "}
                 <Link
                   href="/login"
                   className="text-indigo-600 hover:text-indigo-700 font-semibold transition"

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   ArrowLeft,
   TrendingUp,
@@ -14,7 +14,7 @@ import {
   AlertCircle,
   CheckCircle,
   Lightbulb,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   LineChart,
   Line,
@@ -28,11 +28,11 @@ import {
   ResponsiveContainer,
   RadialBarChart,
   RadialBar,
-} from 'recharts';
-import { useAuthStore } from '@/store/authStore';
-import { useGoalStore } from '@/store/goalStore';
-import { formatDate } from '@/lib/utils';
-import { useState } from 'react';
+} from "recharts";
+import { useAuthStore } from "@/store/authStore";
+import { useGoalStore } from "@/store/goalStore";
+import { formatDate } from "@/lib/utils";
+import { useState } from "react";
 
 export default function InsightsPage() {
   const router = useRouter();
@@ -41,12 +41,22 @@ export default function InsightsPage() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const { isAuthenticated } = useAuthStore();
-  const { goals, progress, insights, stats, fetchGoals, fetchProgress, fetchInsights, fetchStats, generateInsights, isLoading } =
-    useGoalStore();
+  const {
+    goals,
+    progress,
+    insights,
+    stats,
+    fetchGoals,
+    fetchProgress,
+    fetchInsights,
+    fetchStats,
+    generateInsights,
+    isLoading,
+  } = useGoalStore();
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
     fetchGoals();
@@ -55,7 +65,15 @@ export default function InsightsPage() {
       fetchInsights(goalId);
       fetchStats(goalId);
     }
-  }, [isAuthenticated, goalId, router, fetchGoals, fetchProgress, fetchInsights, fetchStats]);
+  }, [
+    isAuthenticated,
+    goalId,
+    router,
+    fetchGoals,
+    fetchProgress,
+    fetchInsights,
+    fetchStats,
+  ]);
 
   const goal = goals.find((g) => g._id === goalId);
   const goalProgress = progress.filter((p) => p.goalId === goalId);
@@ -81,27 +99,35 @@ export default function InsightsPage() {
       hours: p.hoursSpent || 0,
     }));
 
-  const completionChartData = Array.from({ length: Math.min(goal.duration, 30) }, (_, i) => {
-    const day = i + 1;
-    const dayProgress = goalProgress.find((p) => p.day === day);
-    return {
-      day: `${day}`,
-      completed: dayProgress?.completed ? 1 : 0,
-      hours: dayProgress?.hoursSpent || 0,
-    };
-  });
+  const completionChartData = Array.from(
+    { length: Math.min(goal.duration, 30) },
+    (_, i) => {
+      const day = i + 1;
+      const dayProgress = goalProgress.find((p) => p.day === day);
+      return {
+        day: `${day}`,
+        completed: dayProgress?.completed ? 1 : 0,
+        hours: dayProgress?.hoursSpent || 0,
+      };
+    },
+  );
 
-  const motivationData = goalInsights.length > 0 
-    ? [{
-        name: 'Motivation',
-        value: goalInsights[0].motivationLevel,
-        fill: '#8b5cf6',
-      }]
-    : [{
-        name: 'Motivation',
-        value: 0,
-        fill: '#8b5cf6',
-      }];
+  const motivationData =
+    goalInsights.length > 0
+      ? [
+          {
+            name: "Motivation",
+            value: goalInsights[0].motivationLevel,
+            fill: "#8b5cf6",
+          },
+        ]
+      : [
+          {
+            name: "Motivation",
+            value: 0,
+            fill: "#8b5cf6",
+          },
+        ];
 
   const getMoodIcon = (score: number) => {
     if (score > 0.3) return <Smile className="h-6 w-6 text-green-500" />;
@@ -113,13 +139,13 @@ export default function InsightsPage() {
 
   const handleGenerateInsights = async () => {
     if (isGenerating) return;
-    
+
     setIsGenerating(true);
     try {
       await generateInsights(goalId);
       await fetchInsights(goalId);
     } catch (error) {
-      console.error('Error generating insights:', error);
+      console.error("Error generating insights:", error);
     } finally {
       setIsGenerating(false);
     }
@@ -168,9 +194,13 @@ export default function InsightsPage() {
         >
           <div className="flex items-center space-x-3 mb-2">
             <TrendingUp className="h-8 w-8 text-indigo-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Insights & Analytics</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Insights & Analytics
+            </h1>
           </div>
-          <p className="text-gray-600">Track your progress and understand your journey</p>
+          <p className="text-gray-600">
+            Track your progress and understand your journey
+          </p>
         </motion.div>
 
         {/* Stats Overview */}
@@ -184,7 +214,9 @@ export default function InsightsPage() {
             >
               <div className="flex items-center justify-between mb-2">
                 <CheckCircle className="h-8 w-8 text-green-500" />
-                <span className="text-3xl font-bold text-gray-900">{stats.completedDays}</span>
+                <span className="text-3xl font-bold text-gray-900">
+                  {stats.completedDays}
+                </span>
               </div>
               <p className="text-sm text-gray-600">Days Completed</p>
             </motion.div>
@@ -197,7 +229,9 @@ export default function InsightsPage() {
             >
               <div className="flex items-center justify-between mb-2">
                 <Target className="h-8 w-8 text-blue-500" />
-                <span className="text-3xl font-bold text-gray-900">{stats.completionRate}%</span>
+                <span className="text-3xl font-bold text-gray-900">
+                  {stats.completionRate}%
+                </span>
               </div>
               <p className="text-sm text-gray-600">Completion Rate</p>
             </motion.div>
@@ -210,7 +244,9 @@ export default function InsightsPage() {
             >
               <div className="flex items-center justify-between mb-2">
                 <Zap className="h-8 w-8 text-orange-500" />
-                <span className="text-3xl font-bold text-gray-900">{stats.currentStreak}</span>
+                <span className="text-3xl font-bold text-gray-900">
+                  {stats.currentStreak}
+                </span>
               </div>
               <p className="text-sm text-gray-600">Current Streak</p>
             </motion.div>
@@ -224,7 +260,7 @@ export default function InsightsPage() {
               <div className="flex items-center justify-between mb-2">
                 {getSentimentIcon(stats.averageSentiment)}
                 <span className="text-3xl font-bold text-gray-900">
-                  {stats.averageSentiment > 0 ? '+' : ''}
+                  {stats.averageSentiment > 0 ? "+" : ""}
                   {(stats.averageSentiment * 100).toFixed(0)}
                 </span>
               </div>
@@ -255,7 +291,7 @@ export default function InsightsPage() {
                     dataKey="sentiment"
                     stroke="#8b5cf6"
                     strokeWidth={3}
-                    dot={{ fill: '#8b5cf6', r: 5 }}
+                    dot={{ fill: "#8b5cf6", r: 5 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -273,7 +309,9 @@ export default function InsightsPage() {
             transition={{ delay: 0.6 }}
             className="glass p-6 rounded-2xl"
           >
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Daily Completion</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
+              Daily Completion
+            </h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={completionChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -295,7 +333,9 @@ export default function InsightsPage() {
             transition={{ delay: 0.7 }}
             className="glass p-6 rounded-2xl mb-8"
           >
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Motivation Level</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
+              Motivation Level
+            </h2>
             <div className="flex items-center justify-center">
               <ResponsiveContainer width="100%" height={200}>
                 <RadialBarChart
@@ -307,11 +347,7 @@ export default function InsightsPage() {
                   startAngle={180}
                   endAngle={0}
                 >
-                  <RadialBar
-                    background
-                    dataKey="value"
-                    cornerRadius={10}
-                  />
+                  <RadialBar background dataKey="value" cornerRadius={10} />
                   <text
                     x="50%"
                     y="50%"
@@ -335,7 +371,9 @@ export default function InsightsPage() {
             transition={{ delay: 0.8 }}
             className="glass p-6 rounded-2xl"
           >
-            <h2 className="text-xl font-bold text-gray-900 mb-6">AI-Generated Insights</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
+              AI-Generated Insights
+            </h2>
             <div className="space-y-6">
               {goalInsights.map((insight) => (
                 <div key={insight._id} className="space-y-4">
@@ -346,7 +384,9 @@ export default function InsightsPage() {
                       </h3>
                       <p className="text-gray-600 mb-4">{insight.summary}</p>
                     </div>
-                    <span className="text-sm text-gray-500">{formatDate(insight.generatedAt)}</span>
+                    <span className="text-sm text-gray-500">
+                      {formatDate(insight.generatedAt)}
+                    </span>
                   </div>
 
                   {/* Highlights */}
@@ -354,11 +394,16 @@ export default function InsightsPage() {
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                       <div className="flex items-center space-x-2 mb-3">
                         <CheckCircle className="h-5 w-5 text-green-600" />
-                        <h4 className="font-semibold text-green-900">Highlights</h4>
+                        <h4 className="font-semibold text-green-900">
+                          Highlights
+                        </h4>
                       </div>
                       <ul className="space-y-2">
                         {insight.highlights.map((highlight, index) => (
-                          <li key={index} className="text-sm text-green-800 flex items-start">
+                          <li
+                            key={index}
+                            className="text-sm text-green-800 flex items-start"
+                          >
                             <span className="mr-2">•</span>
                             <span>{highlight}</span>
                           </li>
@@ -372,11 +417,16 @@ export default function InsightsPage() {
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                       <div className="flex items-center space-x-2 mb-3">
                         <AlertCircle className="h-5 w-5 text-red-600" />
-                        <h4 className="font-semibold text-red-900">Challenges</h4>
+                        <h4 className="font-semibold text-red-900">
+                          Challenges
+                        </h4>
                       </div>
                       <ul className="space-y-2">
                         {insight.blockers.map((blocker, index) => (
-                          <li key={index} className="text-sm text-red-800 flex items-start">
+                          <li
+                            key={index}
+                            className="text-sm text-red-800 flex items-start"
+                          >
                             <span className="mr-2">•</span>
                             <span>{blocker}</span>
                           </li>
@@ -390,15 +440,22 @@ export default function InsightsPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div className="flex items-center space-x-2 mb-3">
                         <Lightbulb className="h-5 w-5 text-blue-600" />
-                        <h4 className="font-semibold text-blue-900">Recommendations</h4>
+                        <h4 className="font-semibold text-blue-900">
+                          Recommendations
+                        </h4>
                       </div>
                       <ul className="space-y-2">
-                        {insight.recommendations.map((recommendation, index) => (
-                          <li key={index} className="text-sm text-blue-800 flex items-start">
-                            <span className="mr-2">•</span>
-                            <span>{recommendation}</span>
-                          </li>
-                        ))}
+                        {insight.recommendations.map(
+                          (recommendation, index) => (
+                            <li
+                              key={index}
+                              className="text-sm text-blue-800 flex items-start"
+                            >
+                              <span className="mr-2">•</span>
+                              <span>{recommendation}</span>
+                            </li>
+                          ),
+                        )}
                       </ul>
                     </div>
                   )}
@@ -416,10 +473,12 @@ export default function InsightsPage() {
             className="glass p-12 rounded-2xl text-center"
           >
             <TrendingUp className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Insights Yet</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              No Insights Yet
+            </h3>
             <p className="text-gray-600">
-              Insights are generated weekly based on your progress. Keep tracking your progress to
-              unlock AI-powered insights!
+              Insights are generated weekly based on your progress. Keep
+              tracking your progress to unlock AI-powered insights!
             </p>
           </motion.div>
         )}

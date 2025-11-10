@@ -3,7 +3,7 @@ export interface User {
   name: string;
   email: string;
   avatar?: string;
-  provider: 'credentials' | 'google' | 'github';
+  provider: "credentials" | "google" | "github";
   createdAt: string;
 }
 
@@ -11,7 +11,7 @@ export interface DayPlan {
   day: number;
   task: string;
   focus: string;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
+  difficulty: "Easy" | "Medium" | "Hard";
   estimatedHours: number;
   isRestDay?: boolean;
 }
@@ -24,7 +24,7 @@ export interface Goal {
   duration: number;
   hoursPerDay: number;
   plan: DayPlan[];
-  status: 'active' | 'completed' | 'abandoned';
+  status: "active" | "completed" | "abandoned";
   startDate: string;
   completedDays: number;
   createdAt: string;

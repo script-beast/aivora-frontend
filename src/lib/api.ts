@@ -1,6 +1,6 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosInstance, AxiosError } from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 class ApiClient {
   private client: AxiosInstance;
@@ -9,7 +9,7 @@ class ApiClient {
     this.client = axios.create({
       baseURL: API_URL,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
@@ -22,7 +22,7 @@ class ApiClient {
         }
         return config;
       },
-      (error) => Promise.reject(error)
+      (error) => Promise.reject(error),
     );
 
     // Response interceptor for error handling
@@ -32,52 +32,52 @@ class ApiClient {
         if (error.response?.status === 401) {
           // Clear token and redirect to login
           this.clearToken();
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login';
+          if (typeof window !== "undefined") {
+            window.location.href = "/login";
           }
         }
         return Promise.reject(error);
-      }
+      },
     );
   }
 
   private getToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token');
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("auth_token");
     }
     return null;
   }
 
   private clearToken(): void {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("auth_user");
     }
   }
 
   setToken(token: string): void {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       if (token) {
-        localStorage.setItem('auth_token', token);
+        localStorage.setItem("auth_token", token);
       } else {
-        localStorage.removeItem('auth_token');
+        localStorage.removeItem("auth_token");
       }
     }
   }
 
   // Auth endpoints
   async register(data: { name: string; email: string; password: string }) {
-    const response = await this.client.post('/auth/register', data);
+    const response = await this.client.post("/auth/register", data);
     return response.data;
   }
 
   async login(data: { email: string; password: string }) {
-    const response = await this.client.post('/auth/login', data);
+    const response = await this.client.post("/auth/login", data);
     return response.data;
   }
 
   async getMe() {
-    const response = await this.client.get('/auth/me');
+    const response = await this.client.get("/auth/me");
     return response.data;
   }
 
@@ -89,12 +89,12 @@ class ApiClient {
     hoursPerDay: number;
     additionalContext?: string;
   }) {
-    const response = await this.client.post('/goals', data);
+    const response = await this.client.post("/goals", data);
     return response.data;
   }
 
   async getGoals(status?: string) {
-    const response = await this.client.get('/goals', {
+    const response = await this.client.get("/goals", {
       params: status ? { status } : {},
     });
     return response.data;
@@ -105,7 +105,10 @@ class ApiClient {
     return response.data;
   }
 
-  async updateGoal(id: string, data: Partial<{ title: string; description: string; status: string }>) {
+  async updateGoal(
+    id: string,
+    data: Partial<{ title: string; description: string; status: string }>,
+  ) {
     const response = await this.client.put(`/goals/${id}`, data);
     return response.data;
   }
@@ -116,7 +119,9 @@ class ApiClient {
   }
 
   async regenerateGoalPlan(id: string, feedback?: string) {
-    const response = await this.client.post(`/goals/${id}/regenerate`, { feedback });
+    const response = await this.client.post(`/goals/${id}/regenerate`, {
+      feedback,
+    });
     return response.data;
   }
 
@@ -128,7 +133,7 @@ class ApiClient {
     comment?: string;
     hoursSpent?: number;
   }) {
-    const response = await this.client.post('/progress', data);
+    const response = await this.client.post("/progress", data);
     return response.data;
   }
 
@@ -142,7 +147,10 @@ class ApiClient {
     return response.data;
   }
 
-  async updateProgress(id: string, data: Partial<{ completed: boolean; comment: string; hoursSpent: number }>) {
+  async updateProgress(
+    id: string,
+    data: Partial<{ completed: boolean; comment: string; hoursSpent: number }>,
+  ) {
     const response = await this.client.put(`/progress/${id}`, data);
     return response.data;
   }
@@ -164,14 +172,16 @@ class ApiClient {
   }
 
   // PDF endpoint
-  async downloadGoalReport(goalId: string): Promise<{ blob: Blob; filename: string }> {
+  async downloadGoalReport(
+    goalId: string,
+  ): Promise<{ blob: Blob; filename: string }> {
     const response = await this.client.get(`/pdf/report/${goalId}`, {
-      responseType: 'blob',
+      responseType: "blob",
     });
 
     // Extract filename from Content-Disposition header
-    const contentDisposition = response.headers['content-disposition'];
-    let filename = 'goal_report.pdf';
+    const contentDisposition = response.headers["content-disposition"];
+    let filename = "goal_report.pdf";
 
     if (contentDisposition) {
       const filenameMatch = contentDisposition.match(/filename="(.+)"/);
@@ -181,7 +191,7 @@ class ApiClient {
     }
 
     return {
-      blob: new Blob([response.data], { type: 'application/pdf' }),
+      blob: new Blob([response.data], { type: "application/pdf" }),
       filename,
     };
   }

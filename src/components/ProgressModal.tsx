@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, CheckCircle, MessageSquare, Clock, TrendingUp } from 'lucide-react';
-import { useGoalStore } from '@/store/goalStore';
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, CheckCircle, MessageSquare, Clock, TrendingUp } from "lucide-react";
+import { useGoalStore } from "@/store/goalStore";
 
 interface ProgressModalProps {
   isOpen: boolean;
@@ -25,16 +25,16 @@ export default function ProgressModal({
   existingProgress,
 }: ProgressModalProps) {
   const { updateProgress, isLoading } = useGoalStore();
-  
+
   const [formData, setFormData] = useState({
     completed: existingProgress?.completed || false,
-    comment: existingProgress?.comment || '',
+    comment: existingProgress?.comment || "",
     hoursSpent: existingProgress?.hoursSpent || 0,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       await updateProgress({
         goalId,
@@ -45,7 +45,7 @@ export default function ProgressModal({
       });
       onClose();
     } catch (error) {
-      console.error('Error saving progress:', error);
+      console.error("Error saving progress:", error);
     }
   };
 
@@ -80,8 +80,12 @@ export default function ProgressModal({
 
           {/* Header */}
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Track Progress - Day {day}</h2>
-            <p className="text-gray-600">Update your progress and share how it went</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Track Progress - Day {day}
+            </h2>
+            <p className="text-gray-600">
+              Update your progress and share how it went
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -90,25 +94,29 @@ export default function ProgressModal({
               <label className="flex items-center space-x-3 cursor-pointer group">
                 <div
                   className={`relative w-14 h-7 rounded-full transition ${
-                    formData.completed ? 'bg-green-500' : 'bg-gray-300'
+                    formData.completed ? "bg-green-500" : "bg-gray-300"
                   }`}
                 >
                   <div
                     className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
-                      formData.completed ? 'translate-x-7' : 'translate-x-0'
+                      formData.completed ? "translate-x-7" : "translate-x-0"
                     }`}
                   />
                 </div>
                 <div>
                   <span className="text-lg font-semibold text-gray-900">
-                    {formData.completed ? 'Completed' : 'Mark as Complete'}
+                    {formData.completed ? "Completed" : "Mark as Complete"}
                   </span>
-                  {formData.completed && <CheckCircle className="inline h-5 w-5 text-green-500 ml-2" />}
+                  {formData.completed && (
+                    <CheckCircle className="inline h-5 w-5 text-green-500 ml-2" />
+                  )}
                 </div>
                 <input
                   type="checkbox"
                   checked={formData.completed}
-                  onChange={(e) => setFormData({ ...formData, completed: e.target.checked })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, completed: e.target.checked })
+                  }
                   className="sr-only"
                 />
               </label>
@@ -123,7 +131,12 @@ export default function ProgressModal({
               <input
                 type="number"
                 value={formData.hoursSpent}
-                onChange={(e) => setFormData({ ...formData, hoursSpent: parseFloat(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    hoursSpent: parseFloat(e.target.value) || 0,
+                  })
+                }
                 min={0}
                 max={24}
                 step={0.5}
@@ -135,11 +148,13 @@ export default function ProgressModal({
                   <button
                     key={hours}
                     type="button"
-                    onClick={() => setFormData({ ...formData, hoursSpent: hours })}
+                    onClick={() =>
+                      setFormData({ ...formData, hoursSpent: hours })
+                    }
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                       formData.hoursSpent === hours
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? "bg-indigo-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
                   >
                     {hours}h
@@ -156,12 +171,16 @@ export default function ProgressModal({
               </label>
               <textarea
                 value={formData.comment}
-                onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, comment: e.target.value })
+                }
                 placeholder="How did it go? Any challenges or breakthroughs?"
                 rows={4}
                 className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-gray-900 bg-white/50 backdrop-blur-sm"
               />
-              <p className="mt-2 text-xs text-gray-500">{formData.comment.length}/500 characters</p>
+              <p className="mt-2 text-xs text-gray-500">
+                {formData.comment.length}/500 characters
+              </p>
             </div>
 
             {/* Sentiment Preview (if comment exists) */}
@@ -169,10 +188,13 @@ export default function ProgressModal({
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center space-x-2 mb-2">
                   <TrendingUp className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm font-semibold text-blue-900">AI Sentiment Analysis</span>
+                  <span className="text-sm font-semibold text-blue-900">
+                    AI Sentiment Analysis
+                  </span>
                 </div>
                 <p className="text-sm text-blue-800">
-                  Your note will be analyzed to track mood trends and provide personalized insights
+                  Your note will be analyzed to track mood trends and provide
+                  personalized insights
                 </p>
               </div>
             )}
@@ -197,7 +219,7 @@ export default function ProgressModal({
                     Saving...
                   </>
                 ) : (
-                  'Save Progress'
+                  "Save Progress"
                 )}
               </button>
             </div>

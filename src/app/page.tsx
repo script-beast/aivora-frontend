@@ -1,12 +1,19 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { Target, Zap, TrendingUp, Brain, ArrowRight, Sparkles } from 'lucide-react';
-import Link from 'next/link';
-import { useAuthStore } from '@/store/authStore';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { motion } from "framer-motion";
+import {
+  Target,
+  Zap,
+  TrendingUp,
+  Brain,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
+import Link from "next/link";
+import { useAuthStore } from "@/store/authStore";
 
 export default function Home() {
   const router = useRouter();
@@ -14,30 +21,30 @@ export default function Home() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
   }, [isAuthenticated, router]);
 
   const features = [
     {
       icon: Brain,
-      title: 'AI-Powered Planning',
-      description: 'Generate structured daily roadmaps for any goal with GPT-4',
+      title: "AI-Powered Planning",
+      description: "Generate structured daily roadmaps for any goal with GPT-4",
     },
     {
       icon: TrendingUp,
-      title: 'Progress Analytics',
-      description: 'Beautiful charts and insights tracking your journey',
+      title: "Progress Analytics",
+      description: "Beautiful charts and insights tracking your journey",
     },
     {
       icon: Zap,
-      title: 'Sentiment Analysis',
-      description: 'Real-time mood tracking and personalized recommendations',
+      title: "Sentiment Analysis",
+      description: "Real-time mood tracking and personalized recommendations",
     },
     {
       icon: Sparkles,
-      title: 'Adaptive Plans',
-      description: 'AI adjusts your roadmap based on actual progress',
+      title: "Adaptive Plans",
+      description: "AI adjusts your roadmap based on actual progress",
     },
   ];
 
@@ -48,10 +55,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center">
-              <Image 
-                src="/logo-text.svg" 
-                alt="Aivora Logo" 
-                width={140} 
+              <Image
+                src="/logo-text.svg"
+                alt="Aivora Logo"
+                width={140}
                 height={42}
                 priority
               />
@@ -88,8 +95,8 @@ export default function Home() {
               <span className="text-gray-900">With AI Guidance</span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Transform any goal into a structured roadmap. Track progress, get insights, and stay
-              motivated with your AI-powered mentor.
+              Transform any goal into a structured roadmap. Track progress, get
+              insights, and stay motivated with your AI-powered mentor.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link href="/register">
@@ -114,7 +121,9 @@ export default function Home() {
                 <div className="aspect-video bg-linear-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center">
                   <div className="text-center">
                     <Brain className="h-24 w-24 text-indigo-600 mx-auto mb-4" />
-                    <p className="text-gray-600 text-lg">AI Dashboard Preview</p>
+                    <p className="text-gray-600 text-lg">
+                      AI Dashboard Preview
+                    </p>
                   </div>
                 </div>
               </div>
@@ -126,8 +135,12 @@ export default function Home() {
       {/* Features Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Powered by AI</h2>
-          <p className="text-xl text-gray-600">Everything you need to achieve your goals</p>
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            Powered by AI
+          </h2>
+          <p className="text-xl text-gray-600">
+            Everything you need to achieve your goals
+          </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {features.map((feature, index) => (
@@ -141,7 +154,9 @@ export default function Home() {
               <div className="w-12 h-12 bg-linear-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
                 <feature.icon className="h-6 w-6 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                {feature.title}
+              </h3>
               <p className="text-gray-600">{feature.description}</p>
             </motion.div>
           ))}
@@ -156,7 +171,9 @@ export default function Home() {
               <Target className="h-6 w-6 text-indigo-600" />
               <span className="text-xl font-bold text-gray-900">Aivora</span>
             </div>
-            <p className="text-gray-600">&copy; 2025 Aivora. All rights reserved.</p>
+            <p className="text-gray-600">
+              &copy; 2025 Aivora. All rights reserved.
+            </p>
           </div>
         </div>
       </footer>
