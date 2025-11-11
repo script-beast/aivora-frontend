@@ -1,455 +1,494 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Target,
-  Calendar,
-  Clock,
-  ChevronRight,
-  ChevronLeft,
-  Sparkles,
-  CheckCircle,
-  Loader2,
-} from "lucide-react";
-import { useAuthStore } from "@/store/authStore";
-import { useGoalStore } from "@/store/goalStore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Sparkles, Loader2, CheckCircle2, Calendar, Clock } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { goalAPI } from "@/lib/api";
+import { ThemeToggle } from "@/components/ThemeToggle";
+
+type FormStep = "details" | "config" | "generating" | "success";
 
 export default function CreateGoalPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
-  const { createGoal, isLoading } = useGoalStore();
-
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<FormStep>("details");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     duration: 30,
     hoursPerDay: 2,
   });
-  const [errors, setErrors] = useState<{
-    title?: string;
-    description?: string;
-    duration?: string;
-    hoursPerDay?: string;
-  }>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [newGoalId, setNewGoalId] = useState("");
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login");
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "title" || name === "description" ? value : parseFloat(value) || 0,
+    }));
+    // Clear error when user types
+    if (errors[name]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
-  }, [isAuthenticated, router]);
+  };
 
-  const validateStep = (currentStep: number): boolean => {
-    const newErrors: typeof errors = {};
-
-    if (currentStep === 1) {
-      if (!formData.title || formData.title.length < 3) {
-        newErrors.title = "Title must be at least 3 characters";
-      }
-      if (formData.description && formData.description.length > 500) {
-        newErrors.description = "Description must be less than 500 characters";
-      }
+  const validateDetails = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.title.trim()) {
+      newErrors.title = "Goal title is required";
+    } else if (formData.title.trim().length < 3) {
+      newErrors.title = "Goal title must be at least 3 characters";
     }
 
-    if (currentStep === 2) {
-      if (formData.duration < 1 || formData.duration > 365) {
-        newErrors.duration = "Duration must be between 1 and 365 days";
-      }
-      if (formData.hoursPerDay < 0.5 || formData.hoursPerDay > 24) {
-        newErrors.hoursPerDay = "Hours per day must be between 0.5 and 24";
-      }
+    if (formData.description && formData.description.length > 500) {
+      newErrors.description = "Description must be less than 500 characters";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const nextStep = () => {
-    if (validateStep(step)) {
-      setStep(step + 1);
+  const validateConfig = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (formData.duration < 1 || formData.duration > 365) {
+      newErrors.duration = "Duration must be between 1 and 365 days";
+    }
+
+    if (formData.hoursPerDay < 0.5 || formData.hoursPerDay > 12) {
+      newErrors.hoursPerDay = "Hours per day must be between 0.5 and 12";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (step === "details" && validateDetails()) {
+      setStep("config");
     }
   };
 
-  const prevStep = () => {
-    setStep(step - 1);
-  };
-
   const handleSubmit = async () => {
-    if (!validateStep(step)) return;
+    if (!validateConfig()) return;
+
+    // Start the button animation sequence
+    setStep("generating");
 
     try {
-      const newGoal = await createGoal({
+      const response = await goalAPI.create({
         title: formData.title,
-        description: formData.description,
+        description: formData.description || undefined,
         duration: formData.duration,
         hoursPerDay: formData.hoursPerDay,
       });
+      
+      const goalId = response.goal?._id || response._id;
+      setNewGoalId(goalId);
 
-      if (newGoal) {
-        router.push(`/goal/${newGoal._id}`);
-      }
-    } catch (error) {
-      console.error("Error creating goal:", error);
+      // Show success animation
+      setTimeout(() => {
+        setStep("success");
+      }, 1500);
+
+      // Navigate after success animation
+      setTimeout(() => {
+        router.push(`/goal/${goalId}`);
+      }, 3000);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || "Failed to create goal. Please try again.";
+      setErrors({ submit: errorMessage });
+      setStep("config");
     }
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-indigo-50 via-white to-purple-50 py-12 px-4">
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-background">
+      {/* Navigation */}
+      <nav className="border-b bg-card/50 backdrop-blur-xl sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/dashboard">
+              <Button variant="ghost" className="group">
+                <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+                Back to Dashboard
+              </Button>
+            </Link>
+            <ThemeToggle />
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-6 py-12 max-w-2xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="mb-8 text-center"
         >
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Target className="h-10 w-10 text-indigo-600" />
-            <h1 className="text-4xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Create New Goal
-            </h1>
-          </div>
-          <p className="text-gray-600">
-            Let AI help you build a personalized roadmap
+          <h1 className="text-4xl font-bold mb-3">Create New Goal</h1>
+          <p className="text-muted-foreground text-lg">
+            Let AI help you build a personalized roadmap to success
           </p>
         </motion.div>
 
         {/* Progress Indicator */}
-        <div className="mb-12">
-          <div className="flex items-center justify-center space-x-4">
-            <StepIndicator number={1} active={step >= 1} completed={step > 1} />
-            <div
-              className={`h-1 w-16 ${step > 1 ? "bg-indigo-600" : "bg-gray-300"}`}
-            />
-            <StepIndicator number={2} active={step >= 2} completed={step > 2} />
-            <div
-              className={`h-1 w-16 ${step > 2 ? "bg-indigo-600" : "bg-gray-300"}`}
-            />
-            <StepIndicator number={3} active={step >= 3} completed={step > 3} />
-          </div>
-          <div className="flex justify-between mt-4 px-4">
-            <span className="text-sm font-medium text-gray-600">
-              Goal Details
-            </span>
-            <span className="text-sm font-medium text-gray-600">
-              Configuration
-            </span>
-            <span className="text-sm font-medium text-gray-600">Review</span>
-          </div>
-        </div>
-
-        {/* Form Card */}
-        <motion.div
-          key={step}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          className="glass rounded-2xl shadow-xl p-8 mb-6"
-        >
-          <AnimatePresence mode="wait">
-            {/* Step 1: Goal Details */}
-            {step === 1 && (
-              <motion.div
-                key="step1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="space-y-6"
-              >
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Goal Title *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
-                    placeholder="e.g., Learn React.js, Get Fit, Master Python"
-                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 text-gray-900 ${
-                      errors.title
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-indigo-500"
-                    }`}
-                  />
-                  {errors.title && (
-                    <p className="mt-1 text-sm text-red-600">{errors.title}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Description (Optional)
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    placeholder="Provide context or specific objectives for better AI planning"
-                    rows={4}
-                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 resize-none text-gray-900 ${
-                      errors.description
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-indigo-500"
-                    }`}
-                  />
-                  {errors.description && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.description}
-                    </p>
-                  )}
-                  <p className="mt-2 text-xs text-gray-500">
-                    {formData.description.length}/500 characters
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 2: Configuration */}
-            {step === 2 && (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="space-y-6"
-              >
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    <Calendar className="inline h-5 w-5 mr-2 text-indigo-600" />
-                    Duration (Days) *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.duration}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        duration: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    min={1}
-                    max={365}
-                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 text-gray-900 ${
-                      errors.duration
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-indigo-500"
-                    }`}
-                  />
-                  {errors.duration && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.duration}
-                    </p>
-                  )}
-                  <div className="mt-3 flex gap-2">
-                    {[7, 14, 30, 60, 90].map((days) => (
-                      <button
-                        key={days}
-                        onClick={() =>
-                          setFormData({ ...formData, duration: days })
-                        }
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                          formData.duration === days
-                            ? "bg-indigo-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      >
-                        {days}d
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    <Clock className="inline h-5 w-5 mr-2 text-indigo-600" />
-                    Hours Per Day *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.hoursPerDay}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        hoursPerDay: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    min={0.5}
-                    max={24}
-                    step={0.5}
-                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 text-gray-900 ${
-                      errors.hoursPerDay
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-indigo-500"
-                    }`}
-                  />
-                  {errors.hoursPerDay && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.hoursPerDay}
-                    </p>
-                  )}
-                  <div className="mt-3 flex gap-2">
-                    {[1, 2, 3, 4, 6].map((hours) => (
-                      <button
-                        key={hours}
-                        onClick={() =>
-                          setFormData({ ...formData, hoursPerDay: hours })
-                        }
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                          formData.hoursPerDay === hours
-                            ? "bg-indigo-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      >
-                        {hours}h
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-800">
-                    <strong>Total commitment:</strong> Approximately{" "}
-                    {Math.round(formData.duration * formData.hoursPerDay)} hours
-                    over {formData.duration} days
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 3: Review */}
-            {step === 3 && (
-              <motion.div
-                key="step3"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="space-y-6"
-              >
-                <div className="text-center mb-6">
-                  <Sparkles className="h-16 w-16 text-indigo-600 mx-auto mb-4" />
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Ready to Start!
-                  </h2>
-                  <p className="text-gray-600">
-                    Review your goal and let AI generate your roadmap
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <p className="text-xs font-semibold text-gray-500 mb-1">
-                      GOAL TITLE
-                    </p>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {formData.title}
-                    </p>
-                  </div>
-
-                  {formData.description && (
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <p className="text-xs font-semibold text-gray-500 mb-1">
-                        DESCRIPTION
-                      </p>
-                      <p className="text-gray-700">{formData.description}</p>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <p className="text-xs font-semibold text-gray-500 mb-1">
-                        DURATION
-                      </p>
-                      <p className="text-2xl font-bold text-indigo-600">
-                        {formData.duration}
-                      </p>
-                      <p className="text-sm text-gray-600">days</p>
-                    </div>
-
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <p className="text-xs font-semibold text-gray-500 mb-1">
-                        HOURS/DAY
-                      </p>
-                      <p className="text-2xl font-bold text-purple-600">
-                        {formData.hoursPerDay}
-                      </p>
-                      <p className="text-sm text-gray-600">hours</p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        {/* Navigation Buttons */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() =>
-              step === 1 ? router.push("/dashboard") : prevStep()
-            }
-            className="flex items-center space-x-2 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium text-gray-700"
+        {(step === "details" || step === "config") && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mb-8"
           >
-            <ChevronLeft className="h-5 w-5" />
-            <span>{step === 1 ? "Cancel" : "Previous"}</span>
-          </button>
+            <div className="flex items-center justify-center space-x-4">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
+                  step === "details"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-primary/20 text-primary"
+                }`}
+              >
+                1
+              </div>
+              <div className="h-1 w-24 bg-border" />
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
+                  step === "config"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-border text-muted-foreground"
+                }`}
+              >
+                2
+              </div>
+            </div>
+            <div className="flex justify-between mt-4 px-4 max-w-md mx-auto">
+              <span className="text-sm font-medium text-muted-foreground">
+                Goal Details
+              </span>
+              <span className="text-sm font-medium text-muted-foreground">
+                Configuration
+              </span>
+            </div>
+          </motion.div>
+        )}
 
-          {step < 3 ? (
-            <button
-              onClick={nextStep}
-              className="flex items-center space-x-2 px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-xl transition font-semibold"
+        <AnimatePresence mode="wait">
+          {/* Step 1: Goal Details */}
+          {step === "details" && (
+            <motion.div
+              key="details"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
             >
-              <span>Next Step</span>
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={isLoading}
-              className="flex items-center space-x-2 px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-xl transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Generating Plan...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-5 w-5" />
-                  <span>Generate AI Plan</span>
-                </>
-              )}
-            </button>
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    <span>What&apos;s Your Goal?</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Tell us what you want to achieve
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="title" className="text-base">
+                      Goal Title *
+                    </Label>
+                    <Input
+                      id="title"
+                      name="title"
+                      type="text"
+                      placeholder="e.g., Learn Web Development, Run a Marathon, Start a Business"
+                      value={formData.title}
+                      onChange={handleChange}
+                      className="text-base h-12"
+                    />
+                    {errors.title && (
+                      <p className="text-sm text-destructive">{errors.title}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description" className="text-base">
+                      Description (Optional)
+                    </Label>
+                    <textarea
+                      id="description"
+                      name="description"
+                      rows={4}
+                      placeholder="Add any specific details, constraints, or preferences..."
+                      value={formData.description}
+                      onChange={handleChange}
+                      className="flex w-full rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all resize-none"
+                    />
+                    {errors.description && (
+                      <p className="text-sm text-destructive">
+                        {errors.description}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {formData.description.length}/500 characters
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleNext}
+                      variant="gradient"
+                      size="lg"
+                    >
+                      Next Step
+                      <ArrowLeft className="ml-2 w-4 h-4 rotate-180" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function StepIndicator({
-  number,
-  active,
-  completed,
-}: {
-  number: number;
-  active: boolean;
-  completed: boolean;
-}) {
-  return (
-    <div
-      className={`w-12 h-12 rounded-full flex items-center justify-center font-bold transition ${
-        completed
-          ? "bg-indigo-600 text-white"
-          : active
-            ? "bg-indigo-100 text-indigo-600 border-2 border-indigo-600"
-            : "bg-gray-200 text-gray-500"
-      }`}
-    >
-      {completed ? <CheckCircle className="h-6 w-6" /> : number}
+          {/* Step 2: Configuration */}
+          {step === "config" && (
+            <motion.div
+              key="config"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    <span>Time Commitment</span>
+                  </CardTitle>
+                  <CardDescription>
+                    How much time can you dedicate?
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {errors.submit && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm"
+                    >
+                      {errors.submit}
+                    </motion.div>
+                  )}
+
+                  <div className="space-y-3">
+                    <Label htmlFor="duration" className="text-base flex items-center">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Duration (days) *
+                    </Label>
+                    <Input
+                      id="duration"
+                      name="duration"
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={formData.duration}
+                      onChange={handleChange}
+                      className="text-base h-12"
+                    />
+                    {errors.duration && (
+                      <p className="text-sm text-destructive">{errors.duration}</p>
+                    )}
+                    <div className="flex gap-2 flex-wrap">
+                      {[7, 14, 30, 60, 90].map((days) => (
+                        <Button
+                          key={days}
+                          type="button"
+                          variant={formData.duration === days ? "default" : "outline"}
+                          size="sm"
+                          onClick={() =>
+                            setFormData((prev) => ({ ...prev, duration: days }))
+                          }
+                        >
+                          {days}d
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="hoursPerDay" className="text-base flex items-center">
+                      <Clock className="w-4 h-4 mr-2" />
+                      Hours per day *
+                    </Label>
+                    <Input
+                      id="hoursPerDay"
+                      name="hoursPerDay"
+                      type="number"
+                      min={0.5}
+                      max={12}
+                      step={0.5}
+                      value={formData.hoursPerDay}
+                      onChange={handleChange}
+                      className="text-base h-12"
+                    />
+                    {errors.hoursPerDay && (
+                      <p className="text-sm text-destructive">
+                        {errors.hoursPerDay}
+                      </p>
+                    )}
+                    <div className="flex gap-2 flex-wrap">
+                      {[1, 2, 3, 4, 6].map((hours) => (
+                        <Button
+                          key={hours}
+                          type="button"
+                          variant={formData.hoursPerDay === hours ? "default" : "outline"}
+                          size="sm"
+                          onClick={() =>
+                            setFormData((prev) => ({ ...prev, hoursPerDay: hours }))
+                          }
+                        >
+                          {hours}h
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
+                    <p className="text-sm">
+                      <strong>Total commitment:</strong> Approximately{" "}
+                      {Math.round(formData.duration * formData.hoursPerDay)} hours
+                      over {formData.duration} days
+                    </p>
+                  </div>
+
+                  <div className="flex justify-between pt-4">
+                    <Button
+                      onClick={() => setStep("details")}
+                      variant="outline"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back
+                    </Button>
+                    
+                    <Button
+                      onClick={handleSubmit}
+                      variant="gradient"
+                      size="lg"
+                    >
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Generate My Plan
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Generating State */}
+          {step === "generating" && (
+            <motion.div
+              key="generating"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="flex flex-col items-center justify-center py-20"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+                className="mb-6"
+              >
+                <Loader2 className="w-16 h-16 text-primary" />
+              </motion.div>
+              <h2 className="text-2xl font-bold mb-2">
+                Creating Your Roadmap
+              </h2>
+              <p className="text-muted-foreground text-center max-w-md">
+                AI is analyzing your goal and generating a personalized action plan...
+              </p>
+            </motion.div>
+          )}
+
+          {/* Success State */}
+          {step === "success" && (
+            <motion.div
+              key="success"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center py-20"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 20,
+                }}
+                className="mb-6"
+              >
+                <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <CheckCircle2 className="w-12 h-12 text-green-500" />
+                </div>
+              </motion.div>
+              <h2 className="text-3xl font-bold mb-2">Goal Created! 🎉</h2>
+              <p className="text-muted-foreground mb-4">
+                Your personalized roadmap is ready
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Redirecting to your goal...
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Tips Section */}
+        {step === "details" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-8"
+          >
+            <Card className="bg-primary/5 border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-lg">💡 Tips for Better Results</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>
+                      Be specific: &quot;Learn React in 3 months&quot; works better than &quot;Learn programming&quot;
+                    </span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>Include your current level: &quot;Beginner to Intermediate Python&quot;</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>Add constraints: &quot;30 minutes daily&quot; or &quot;Weekend project&quot;</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 }

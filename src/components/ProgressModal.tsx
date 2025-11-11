@@ -2,230 +2,309 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckCircle, MessageSquare, Clock, TrendingUp } from "lucide-react";
-import { useGoalStore } from "@/store/goalStore";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { X, Send, Sparkles, Clock, CheckCircle, Brain } from "lucide-react";
+import { progressAPI } from "@/lib/api";
 
 interface ProgressModalProps {
   isOpen: boolean;
   onClose: () => void;
   goalId: string;
   day: number;
-  existingProgress?: {
-    completed: boolean;
-    comment?: string;
-    hoursSpent?: number;
-  };
+  onSuccess?: () => void;
 }
 
-export default function ProgressModal({
+export function ProgressModal({
   isOpen,
   onClose,
   goalId,
   day,
-  existingProgress,
+  onSuccess,
 }: ProgressModalProps) {
-  const { updateProgress, isLoading } = useGoalStore();
+  const [completed, setCompleted] = useState(true);
+  const [hoursSpent, setHoursSpent] = useState<string>("");
+  const [comment, setComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const [formData, setFormData] = useState({
-    completed: existingProgress?.completed || false,
-    comment: existingProgress?.comment || "",
-    hoursSpent: existingProgress?.hoursSpent || 0,
-  });
+  // Quick hour buttons
+  const quickHours = [0.5, 1, 2, 3, 4];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
-      await updateProgress({
+      await progressAPI.create({
         goalId,
         day,
-        completed: formData.completed,
-        comment: formData.comment,
-        hoursSpent: formData.hoursSpent,
+        completed,
+        comment: comment || undefined,
+        hoursSpent: hoursSpent ? parseFloat(hoursSpent) : undefined,
       });
-      onClose();
+
+      // Show success animation
+      setShowSuccess(true);
+      
+      setTimeout(() => {
+        setCompleted(true);
+        setHoursSpent("");
+        setComment("");
+        setShowSuccess(false);
+        onClose();
+        onSuccess?.();
+      }, 2000);
     } catch (error) {
-      console.error("Error saving progress:", error);
+      console.error("Failed to add progress:", error);
+      setIsSubmitting(false);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        />
-
-        {/* Modal */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative glass rounded-2xl shadow-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto modal-scroll"
-        >
-          {/* Close Button */}
-          <button
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 transition"
-          >
-            <X className="h-5 w-5 text-gray-600" />
-          </button>
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+          />
 
-          {/* Header */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Track Progress - Day {day}
-            </h2>
-            <p className="text-gray-600">
-              Update your progress and share how it went
-            </p>
+          {/* Modal */}
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="w-full max-w-lg"
+            >
+              <Card className="glass-card shadow-2xl">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center space-x-2">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      <span>Day {day} Progress</span>
+                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={onClose}
+                      className="rounded-full"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <AnimatePresence mode="wait">
+                    {!showSuccess ? (
+                      <motion.form
+                        key="form"
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onSubmit={handleSubmit}
+                        className="space-y-6"
+                      >
+                        {/* Completion Toggle */}
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-indigo-50 via-purple-50/50 to-indigo-50 dark:from-primary/10 dark:via-primary/5 dark:to-primary/10 border border-indigo-200 dark:border-primary/30 shadow-sm">
+                          <div className="flex items-center space-x-3">
+                            <CheckCircle className="w-5 h-5 text-primary" />
+                            <div>
+                              <Label className="text-base font-semibold text-foreground">Mark as Completed</Label>
+                              <p className="text-sm text-muted-foreground">Did you complete this day's tasks?</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setCompleted(!completed)}
+                            className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all shadow-inner ${
+                              completed 
+                                ? "bg-primary shadow-primary/20" 
+                                : "bg-gray-300 dark:bg-muted"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform ${
+                                completed ? "translate-x-7" : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        {/* Hours Spent */}
+                        <div className="space-y-3">
+                          <Label htmlFor="hoursSpent" className="text-base flex items-center space-x-2 text-foreground">
+                            <Clock className="w-4 h-4 text-primary" />
+                            <span>Hours Spent (Optional)</span>
+                          </Label>
+                          <div className="space-y-2">
+                            <input
+                              id="hoursSpent"
+                              type="number"
+                              step="0.5"
+                              min="0"
+                              max="24"
+                              placeholder="0.0"
+                              value={hoursSpent}
+                              onChange={(e) => setHoursSpent(e.target.value)}
+                              disabled={isSubmitting}
+                              className="flex w-full rounded-xl border border-gray-300 dark:border-input bg-white dark:bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all shadow-sm"
+                            />
+                            <div className="flex gap-2 flex-wrap">
+                              {quickHours.map((hours) => (
+                                <Button
+                                  key={hours}
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setHoursSpent(hours.toString())}
+                                  disabled={isSubmitting}
+                                  className="text-xs hover:bg-primary/10 hover:text-primary hover:border-primary/50 transition-all"
+                                >
+                                  {hours}h
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Notes & Reflections */}
+                        <div className="space-y-3">
+                          <Label htmlFor="comment" className="text-base text-foreground">
+                            Notes & Reflections
+                          </Label>
+                          <div className="relative">
+                            <textarea
+                              id="comment"
+                              rows={5}
+                              maxLength={500}
+                              placeholder="Share your progress, learnings, challenges, or any thoughts about today's work..."
+                              value={comment}
+                              onChange={(e) => setComment(e.target.value)}
+                              required
+                              disabled={isSubmitting}
+                              className="flex w-full rounded-xl border border-gray-300 dark:border-input bg-white dark:bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all resize-none shadow-sm"
+                            />
+                            <div className="absolute bottom-3 right-4 text-xs text-gray-600 dark:text-muted-foreground bg-white/90 dark:bg-background/80 px-1.5 py-0.5 rounded">
+                              {comment.length}/500
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* AI Sentiment Preview */}
+                        {comment.trim() && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="p-4 rounded-xl bg-gradient-to-r from-purple-100 via-blue-50 to-purple-50 dark:from-purple-500/10 dark:to-blue-500/10 border border-purple-300 dark:border-purple-500/20 shadow-sm"
+                          >
+                            <div className="flex items-start space-x-3">
+                              <Brain className="w-5 h-5 text-purple-600 dark:text-purple-500 mt-0.5" />
+                              <div className="flex-1">
+                                <h4 className="text-sm font-semibold mb-1 text-purple-900 dark:text-purple-100">AI Sentiment Analysis</h4>
+                                <p className="text-xs text-purple-700/80 dark:text-muted-foreground">
+                                  Your reflection will be analyzed to track mood, motivation, and identify patterns in your journey.
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+
+                        <div className="flex justify-end space-x-3 pt-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={onClose}
+                            disabled={isSubmitting}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="submit"
+                            variant="gradient"
+                            disabled={isSubmitting || !comment.trim()}
+                          >
+                            {isSubmitting ? (
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{
+                                  duration: 1,
+                                  repeat: Infinity,
+                                  ease: "linear",
+                                }}
+                                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                              />
+                            ) : (
+                              <>
+                                <Send className="w-4 h-4 mr-2" />
+                                Submit Progress
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </motion.form>
+                    ) : (
+                      <motion.div
+                        key="success"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="py-12 text-center"
+                      >
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 20,
+                          }}
+                          className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/10 mb-4"
+                        >
+                          <motion.div
+                            initial={{ pathLength: 0 }}
+                            animate={{ pathLength: 1 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                          >
+                            <svg
+                              className="w-10 h-10 text-green-500"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <motion.path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                                initial={{ pathLength: 0 }}
+                                animate={{ pathLength: 1 }}
+                                transition={{ duration: 0.5 }}
+                              />
+                            </svg>
+                          </motion.div>
+                        </motion.div>
+                        <h3 className="text-xl font-semibold mb-2">
+                          Progress Saved! 🎉
+                        </h3>
+                        <p className="text-muted-foreground">
+                          Keep up the great work!
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Completion Toggle */}
-            <div>
-              <label className="flex items-center space-x-3 cursor-pointer group">
-                <div
-                  className={`relative w-14 h-7 rounded-full transition ${
-                    formData.completed ? "bg-green-500" : "bg-gray-300"
-                  }`}
-                >
-                  <div
-                    className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
-                      formData.completed ? "translate-x-7" : "translate-x-0"
-                    }`}
-                  />
-                </div>
-                <div>
-                  <span className="text-lg font-semibold text-gray-900">
-                    {formData.completed ? "Completed" : "Mark as Complete"}
-                  </span>
-                  {formData.completed && (
-                    <CheckCircle className="inline h-5 w-5 text-green-500 ml-2" />
-                  )}
-                </div>
-                <input
-                  type="checkbox"
-                  checked={formData.completed}
-                  onChange={(e) =>
-                    setFormData({ ...formData, completed: e.target.checked })
-                  }
-                  className="sr-only"
-                />
-              </label>
-            </div>
-
-            {/* Hours Spent */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                <Clock className="inline h-5 w-5 mr-2 text-indigo-600" />
-                Hours Spent
-              </label>
-              <input
-                type="number"
-                value={formData.hoursSpent}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    hoursSpent: parseFloat(e.target.value) || 0,
-                  })
-                }
-                min={0}
-                max={24}
-                step={0.5}
-                className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white/50 backdrop-blur-sm"
-                placeholder="0.0"
-              />
-              <div className="mt-3 flex gap-2">
-                {[0.5, 1, 2, 3, 4].map((hours) => (
-                  <button
-                    key={hours}
-                    type="button"
-                    onClick={() =>
-                      setFormData({ ...formData, hoursSpent: hours })
-                    }
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                      formData.hoursSpent === hours
-                        ? "bg-indigo-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    {hours}h
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Comment */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                <MessageSquare className="inline h-5 w-5 mr-2 text-indigo-600" />
-                Notes & Reflections (Optional)
-              </label>
-              <textarea
-                value={formData.comment}
-                onChange={(e) =>
-                  setFormData({ ...formData, comment: e.target.value })
-                }
-                placeholder="How did it go? Any challenges or breakthroughs?"
-                rows={4}
-                className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-gray-900 bg-white/50 backdrop-blur-sm"
-              />
-              <p className="mt-2 text-xs text-gray-500">
-                {formData.comment.length}/500 characters
-              </p>
-            </div>
-
-            {/* Sentiment Preview (if comment exists) */}
-            {formData.comment && (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center space-x-2 mb-2">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm font-semibold text-blue-900">
-                    AI Sentiment Analysis
-                  </span>
-                </div>
-                <p className="text-sm text-blue-800">
-                  Your note will be analyzed to track mood trends and provide
-                  personalized insights
-                </p>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex items-center space-x-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex-1 px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-xl transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block mr-2" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Progress"
-                )}
-              </button>
-            </div>
-          </form>
-        </motion.div>
-      </div>
+        </>
+      )}
     </AnimatePresence>
   );
 }

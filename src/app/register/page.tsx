@@ -1,343 +1,264 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Mail,
-  Lock,
-  User,
-  ArrowRight,
-  AlertCircle,
-  CheckCircle,
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { Brain, ArrowRight, User, Mail, Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { authAPI } from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, isAuthenticated, error: authError } = useAuthStore();
-
+  const { setUser, setToken } = useAuthStore();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
-  const [errors, setErrors] = useState<{
-    name?: string;
-    email?: string;
-    password?: string;
-    confirmPassword?: string;
-  }>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.push("/dashboard");
-    }
-  }, [isAuthenticated, router]);
-
-  useEffect(() => {
-    // Calculate password strength
-    let strength = 0;
-    if (formData.password.length >= 8) strength++;
-    if (/[a-z]/.test(formData.password) && /[A-Z]/.test(formData.password))
-      strength++;
-    if (/[0-9]/.test(formData.password)) strength++;
-    if (/[^A-Za-z0-9]/.test(formData.password)) strength++;
-    setPasswordStrength(strength);
-  }, [formData.password]);
-
-  const validateForm = () => {
-    const newErrors: {
-      name?: string;
-      email?: string;
-      password?: string;
-      confirmPassword?: string;
-    } = {};
-
-    if (!formData.name || formData.name.length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
-    }
-
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Invalid email address";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
-    if (!validateForm()) return;
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
 
     setIsLoading(true);
+
     try {
-      await register(formData.name, formData.email, formData.password);
-      // Navigation handled by useEffect
-    } catch (error) {
-      console.error("Registration error:", error);
+      const response = await authAPI.register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
+      const { token, user } = response;
+
+      setToken(token);
+      setUser(user);
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(
+        err.response?.data?.error || err.response?.data?.message || "Failed to register. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getPasswordStrengthColor = () => {
-    if (passwordStrength === 0) return "bg-gray-200";
-    if (passwordStrength === 1) return "bg-red-500";
-    if (passwordStrength === 2) return "bg-yellow-500";
-    if (passwordStrength === 3) return "bg-blue-500";
-    return "bg-green-500";
-  };
-
-  const getPasswordStrengthText = () => {
-    if (passwordStrength === 0) return "";
-    if (passwordStrength === 1) return "Weak";
-    if (passwordStrength === 2) return "Fair";
-    if (passwordStrength === 3) return "Good";
-    return "Strong";
-  };
-
   return (
-    <div className="min-h-screen bg-linear-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* Logo */}
-          <Link href="/" className="flex items-center justify-center mb-8">
-            <Image
-              src="/logo-text.svg"
-              alt="Aivora Logo"
-              width={180}
-              height={54}
-              priority
-            />
-          </Link>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 dark:from-cyan-500/10 dark:via-blue-500/10 dark:to-purple-500/10" />
 
-          {/* Register Card */}
-          <div className="glass rounded-2xl shadow-xl p-8">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Create Account
-              </h1>
-              <p className="text-gray-600">
-                Start your goal achievement journey
-              </p>
+      {/* Floating orbs */}
+      <motion.div
+        className="absolute top-20 left-20 w-72 h-72 bg-indigo-500/30 dark:bg-cyan-500/20 rounded-full blur-3xl"
+        animate={{
+          x: [0, 100, 0],
+          y: [0, 50, 0],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+      <motion.div
+        className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/30 dark:bg-blue-500/20 rounded-full blur-3xl"
+        animate={{
+          x: [0, -100, 0],
+          y: [0, -50, 0],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      {/* Register Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10 w-full max-w-md mx-4"
+      >
+        <Card className="glass-card shadow-2xl">
+          <CardHeader className="text-center">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 rounded-2xl bg-primary/10">
+                <Brain className="w-8 h-8 text-primary" />
+              </div>
             </div>
-
-            {/* Error Alert */}
-            {authError && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3"
-              >
-                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
-                <p className="text-red-700 text-sm">{authError}</p>
-              </motion.div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Name Field */}
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+            <CardTitle className="text-3xl font-bold">Create Account</CardTitle>
+            <CardDescription className="text-base">
+              Start your journey with Aivora today
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm"
                 >
-                  Full Name
-                </label>
+                  {error}
+                </motion.div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
                     id="name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition text-gray-900 ${
-                      errors.name
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-indigo-500"
-                    }`}
+                    name="name"
+                    type="text"
                     placeholder="John Doe"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                    disabled={isLoading}
+                    className="pl-10"
                   />
                 </div>
-                {errors.name && (
-                  <p className="mt-1 text-sm text-red-600">{errors.name}</p>
-                )}
               </div>
 
-              {/* Email Field */}
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Email Address
-                </label>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="email"
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
                     id="email"
+                    name="email"
+                    type="email"
+                    placeholder="name@example.com"
                     value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition text-gray-900 ${
-                      errors.email
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-indigo-500"
-                    }`}
-                    placeholder="you@example.com"
+                    onChange={handleChange}
+                    required
+                    disabled={isLoading}
+                    className="pl-10"
                   />
                 </div>
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-                )}
               </div>
 
-              {/* Password Field */}
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Password
-                </label>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="password"
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
                     id="password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition text-gray-900 ${
-                      errors.password
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-indigo-500"
-                    }`}
-                    placeholder="Create a strong password"
-                  />
-                </div>
-                {/* Password Strength Indicator */}
-                {formData.password && (
-                  <div className="mt-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all ${getPasswordStrengthColor()}`}
-                          style={{ width: `${(passwordStrength / 4) * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-medium text-gray-600">
-                        {getPasswordStrengthText()}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-                )}
-              </div>
-
-              {/* Confirm Password Field */}
-              <div>
-                <label
-                  htmlFor="confirmPassword"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Confirm Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
+                    name="password"
                     type="password"
-                    id="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        confirmPassword: e.target.value,
-                      })
-                    }
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${
-                      errors.confirmPassword
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-indigo-500"
-                    }`}
-                    placeholder="Confirm your password"
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    disabled={isLoading}
+                    className="pl-10"
                   />
-                  {formData.confirmPassword &&
-                    formData.password === formData.confirmPassword && (
-                      <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />
-                    )}
                 </div>
-                {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.confirmPassword}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  At least 6 characters
+                </p>
               </div>
 
-              {/* Submit Button */}
-              <button
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                    disabled={isLoading}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <Button
                 type="submit"
+                className="w-full"
+                variant="gradient"
+                size="lg"
                 disabled={isLoading}
-                className="w-full group px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-xl transition transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-semibold"
               >
                 {isLoading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Creating Account...</span>
-                  </>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
+                    className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                  />
                 ) : (
                   <>
-                    <span>Create Account</span>
-                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition" />
+                    Create Account
+                    <ArrowRight className="ml-2 w-4 h-4" />
                   </>
                 )}
-              </button>
+              </Button>
             </form>
 
-            {/* Login Link */}
-            <div className="mt-6 text-center">
-              <p className="text-gray-600">
+            <div className="mt-6 text-center text-sm">
+              <span className="text-muted-foreground">
                 Already have an account?{" "}
-                <Link
-                  href="/login"
-                  className="text-indigo-600 hover:text-indigo-700 font-semibold transition"
-                >
-                  Sign in
-                </Link>
-              </p>
+              </span>
+              <Link
+                href="/login"
+                className="text-primary font-medium hover:underline"
+              >
+                Sign in
+              </Link>
             </div>
-          </div>
+          </CardContent>
+        </Card>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-center mt-6"
+        >
+          <Link
+            href="/"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← Back to home
+          </Link>
         </motion.div>
-      </div>
+      </motion.div>
     </div>
   );
 }

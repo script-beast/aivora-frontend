@@ -1,20 +1,20 @@
-import axios, { AxiosInstance, AxiosError } from "axios";
+import axios, { AxiosInstance } from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 class ApiClient {
-  private client: AxiosInstance;
+  private axiosInstance: AxiosInstance;
 
   constructor() {
-    this.client = axios.create({
-      baseURL: API_URL,
+    this.axiosInstance = axios.create({
+      baseURL: API_BASE_URL,
       headers: {
         "Content-Type": "application/json",
       },
     });
 
     // Request interceptor to add auth token
-    this.client.interceptors.request.use(
+    this.axiosInstance.interceptors.request.use(
       (config) => {
         const token = this.getToken();
         if (token) {
@@ -22,22 +22,21 @@ class ApiClient {
         }
         return config;
       },
-      (error) => Promise.reject(error),
+      (error) => Promise.reject(error)
     );
 
-    // Response interceptor for error handling
-    this.client.interceptors.response.use(
+    // Response interceptor to handle errors
+    this.axiosInstance.interceptors.response.use(
       (response) => response,
-      (error: AxiosError) => {
+      (error) => {
         if (error.response?.status === 401) {
-          // Clear token and redirect to login
           this.clearToken();
           if (typeof window !== "undefined") {
             window.location.href = "/login";
           }
         }
         return Promise.reject(error);
-      },
+      }
     );
   }
 
@@ -51,33 +50,31 @@ class ApiClient {
   private clearToken(): void {
     if (typeof window !== "undefined") {
       localStorage.removeItem("auth_token");
-      localStorage.removeItem("auth_user");
     }
   }
 
-  setToken(token: string): void {
+  public setToken(token: string): void {
     if (typeof window !== "undefined") {
-      if (token) {
-        localStorage.setItem("auth_token", token);
-      } else {
-        localStorage.removeItem("auth_token");
-      }
+      localStorage.setItem("auth_token", token);
     }
   }
 
   // Auth endpoints
   async register(data: { name: string; email: string; password: string }) {
-    const response = await this.client.post("/auth/register", data);
+    const response = await this.axiosInstance.post("/auth/register", data);
     return response.data;
   }
 
   async login(data: { email: string; password: string }) {
-    const response = await this.client.post("/auth/login", data);
+    const response = await this.axiosInstance.post("/auth/login", data);
+    if (response.data.token) {
+      this.setToken(response.data.token);
+    }
     return response.data;
   }
 
   async getMe() {
-    const response = await this.client.get("/auth/me");
+    const response = await this.axiosInstance.get("/auth/me");
     return response.data;
   }
 
@@ -87,39 +84,40 @@ class ApiClient {
     description?: string;
     duration: number;
     hoursPerDay: number;
-    additionalContext?: string;
   }) {
-    const response = await this.client.post("/goals", data);
+    const response = await this.axiosInstance.post("/goals", data);
     return response.data;
   }
 
-  async getGoals(status?: string) {
-    const response = await this.client.get("/goals", {
-      params: status ? { status } : {},
-    });
+  async getGoals() {
+    const response = await this.axiosInstance.get("/goals");
     return response.data;
   }
 
   async getGoal(id: string) {
-    const response = await this.client.get(`/goals/${id}`);
+    const response = await this.axiosInstance.get(`/goals/${id}`);
     return response.data;
   }
 
   async updateGoal(
     id: string,
-    data: Partial<{ title: string; description: string; status: string }>,
+    data: {
+      title?: string;
+      description?: string;
+      status?: string;
+    }
   ) {
-    const response = await this.client.put(`/goals/${id}`, data);
+    const response = await this.axiosInstance.put(`/goals/${id}`, data);
     return response.data;
   }
 
   async deleteGoal(id: string) {
-    const response = await this.client.delete(`/goals/${id}`);
+    const response = await this.axiosInstance.delete(`/goals/${id}`);
     return response.data;
   }
 
   async regenerateGoalPlan(id: string, feedback?: string) {
-    const response = await this.client.post(`/goals/${id}/regenerate`, {
+    const response = await this.axiosInstance.post(`/goals/${id}/regenerate`, {
       feedback,
     });
     return response.data;
@@ -133,69 +131,127 @@ class ApiClient {
     comment?: string;
     hoursSpent?: number;
   }) {
-    const response = await this.client.post("/progress", data);
+    const response = await this.axiosInstance.post("/progress", data);
     return response.data;
   }
 
   async getProgressByGoal(goalId: string) {
-    const response = await this.client.get(`/progress/goal/${goalId}`);
+    const response = await this.axiosInstance.get(`/progress/goal/${goalId}`);
     return response.data;
   }
 
   async getProgressStats(goalId: string) {
-    const response = await this.client.get(`/progress/goal/${goalId}/stats`);
+    const response = await this.axiosInstance.get(`/progress/stats/${goalId}`);
     return response.data;
   }
 
   async updateProgress(
     id: string,
-    data: Partial<{ completed: boolean; comment: string; hoursSpent: number }>,
+    data: {
+      completed?: boolean;
+      comment?: string;
+    }
   ) {
-    const response = await this.client.put(`/progress/${id}`, data);
+    const response = await this.axiosInstance.put(`/progress/${id}`, data);
     return response.data;
   }
 
   // Insight endpoints
   async generateInsights(goalId: string) {
-    const response = await this.client.post(`/insights/generate/${goalId}`);
+    const response = await this.axiosInstance.post(`/insights/generate/${goalId}`);
     return response.data;
   }
 
   async getInsightsByGoal(goalId: string) {
-    const response = await this.client.get(`/insights/goal/${goalId}`);
+    const response = await this.axiosInstance.get(`/insights/goal/${goalId}`);
     return response.data;
   }
 
   async getLatestInsight(goalId: string) {
-    const response = await this.client.get(`/insights/goal/${goalId}/latest`);
+    const response = await this.axiosInstance.get(`/insights/latest/${goalId}`);
     return response.data;
   }
 
-  // PDF endpoint
-  async downloadGoalReport(
-    goalId: string,
-  ): Promise<{ blob: Blob; filename: string }> {
-    const response = await this.client.get(`/pdf/report/${goalId}`, {
+  // PDF endpoints
+  async downloadGoalReport(goalId: string) {
+    const response = await this.axiosInstance.get(`/pdf/report/${goalId}`, {
       responseType: "blob",
     });
 
-    // Extract filename from Content-Disposition header
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    
+    // Extract filename from Content-Disposition header if available
     const contentDisposition = response.headers["content-disposition"];
-    let filename = "goal_report.pdf";
-
+    let filename = "goal-report.pdf";
     if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-      if (filenameMatch && filenameMatch[1]) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (filenameMatch) {
         filename = filenameMatch[1];
       }
     }
-
-    return {
-      blob: new Blob([response.data], { type: "application/pdf" }),
-      filename,
-    };
+    
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    
+    return response.data;
   }
 }
 
+// Create a single instance
 export const api = new ApiClient();
-export default api;
+
+// Also export individual API objects for backward compatibility
+export const authAPI = {
+  register: (data: { name: string; email: string; password: string }) => 
+    api.register(data),
+  login: (data: { email: string; password: string }) => 
+    api.login(data),
+  getMe: () => 
+    api.getMe(),
+};
+
+export const goalAPI = {
+  create: (data: { title: string; description?: string; duration: number; hoursPerDay: number }) =>
+    api.createGoal(data),
+  getAll: () => 
+    api.getGoals(),
+  getById: (id: string) => 
+    api.getGoal(id),
+  update: (id: string, data: { title?: string; description?: string; status?: string }) =>
+    api.updateGoal(id, data),
+  delete: (id: string) => 
+    api.deleteGoal(id),
+  regenerate: (id: string, feedback?: string) => 
+    api.regenerateGoalPlan(id, feedback),
+};
+
+export const progressAPI = {
+  create: (data: { goalId: string; day: number; completed: boolean; comment?: string; hoursSpent?: number }) =>
+    api.createProgress(data),
+  getByGoal: (goalId: string) => 
+    api.getProgressByGoal(goalId),
+  getStats: (goalId: string) => 
+    api.getProgressStats(goalId),
+  update: (id: string, data: { completed?: boolean; comment?: string }) =>
+    api.updateProgress(id, data),
+};
+
+export const insightAPI = {
+  generate: (goalId: string) => 
+    api.generateInsights(goalId),
+  getByGoal: (goalId: string) => 
+    api.getInsightsByGoal(goalId),
+  getLatest: (goalId: string) => 
+    api.getLatestInsight(goalId),
+};
+
+export const pdfAPI = {
+  download: (goalId: string) => 
+    api.downloadGoalReport(goalId),
+};

@@ -1,264 +1,447 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
-  Target,
   Plus,
+  Target,
   TrendingUp,
   Calendar,
-  Zap,
-  LogOut,
-  Search,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
+import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Loader } from "@/components/Loader";
+import { goalAPI } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
-import { useGoalStore } from "@/store/goalStore";
-import { formatDate, getStatusBadgeColor } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+
+// Staggered animation variants
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 },
+};
+
+interface Goal {
+  _id: string;
+  title: string;
+  description?: string;
+  duration: number;
+  hoursPerDay: number;
+  status: "active" | "completed" | "paused";
+  createdAt: string;
+  plan?: Array<{
+    day: number;
+    tasks: Array<{ description: string; completed?: boolean }>;
+  }>;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, logout, isAuthenticated } = useAuthStore();
-  const { goals, fetchGoals, isLoading } = useGoalStore();
-  const [searchQuery, setSearchQuery] = useState("");
+  const { user, isAuthenticated } = useAuthStore();
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/login");
       return;
     }
-    fetchGoals();
-  }, [isAuthenticated, router, fetchGoals]);
 
-  const handleLogout = () => {
-    logout();
-    router.push("/");
+    fetchGoals();
+  }, [isAuthenticated, router]);
+
+  const fetchGoals = async () => {
+    try {
+      setIsLoading(true);
+      setError("");
+      const response = await goalAPI.getAll();
+      setGoals(response.goals || []);
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Failed to load goals");
+      console.error("Error fetching goals:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const activeGoals = goals.filter((g) => g.status === "active");
-  const completedGoals = goals.filter((g) => g.status === "completed");
+  const calculateProgress = (goal: Goal) => {
+    if (!goal.plan || goal.plan.length === 0) return 0;
 
-  const filteredGoals = goals.filter((goal) =>
-    goal.title.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+    const totalTasks = goal.plan.reduce(
+      (sum, day) => sum + (day.tasks?.length || 0),
+      0
+    );
+    const completedTasks = goal.plan.reduce(
+      (sum, day) =>
+        sum + (day.tasks?.filter((task) => task.completed).length || 0),
+      0
+    );
 
+    return totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  };
+
+  const calculateDaysActive = (createdAt: string) => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const calculateAverageProgress = () => {
+    if (goals.length === 0) return 0;
+    const total = goals.reduce((sum, goal) => sum + calculateProgress(goal), 0);
+    return Math.round(total / goals.length);
+  };
+
+  const calculateStreak = () => {
+    // This would ideally come from progress tracking data
+    // For now, return a placeholder
+    return goals.length > 0
+      ? Math.max(...goals.map((g) => calculateDaysActive(g.createdAt)))
+      : 0;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader message="Loading your dashboard..." size="lg" />
+      </div>
+    );
+  }
   return (
-    <div className="min-h-screen bg-linear-to-br from-indigo-50 via-white to-purple-50">
-      {/* Header */}
-      <header className="bg-white/50 backdrop-blur-xl border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Left: Logo */}
-            <div className="flex items-center">
-              <Image
-                src="/logo-text.svg"
-                alt="Aivora"
-                width={140}
-                height={42}
-                priority
-              />
-            </div>
+    <div className="min-h-screen bg-background">
+      {/* Navigation */}
+      <nav className="border-b bg-card/50 backdrop-blur-xl sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center space-x-2"
+            >
+              <Target className="w-6 h-6 text-primary" />
+              <span className="text-xl font-bold">Dashboard</span>
+            </motion.div>
 
-            {/* Right: User Menu */}
-            <div className="flex items-center space-x-3">
-              <div className="text-right">
-                <p className="text-sm font-semibold text-gray-900">
-                  {user?.name}
-                </p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="p-2 rounded-lg hover:bg-red-50 transition group"
-                title="Logout"
-              >
-                <LogOut className="h-5 w-5 text-gray-600 group-hover:text-red-600" />
-              </button>
+            <div className="flex items-center space-x-4">
+              <ThemeToggle />
+              <Link href="/create-goal">
+                <Button variant="gradient" className="group">
+                  <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform" />
+                  New Goal
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
-      </header>
+      </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content */}
+      <div className="container mx-auto px-6 py-8">
         {/* Welcome Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.name?.split(" ")[0]}! 👋
+          <h1 className="text-4xl font-bold mb-2">
+            Welcome back{user?.name ? `, ${user.name}` : ""}! 👋
           </h1>
-          <p className="text-gray-600">
-            Track your progress and achieve your goals with AI guidance
+          <p className="text-muted-foreground text-lg">
+            {goals.length > 0
+              ? "Here's your progress overview. Keep up the great work!"
+              : "Start your journey by creating your first goal!"}
           </p>
         </motion.div>
 
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive"
+          >
+            {error}
+          </motion.div>
+        )}
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="glass p-6 rounded-xl"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-indigo-100 rounded-lg">
-                <Target className="h-6 w-6 text-indigo-600" />
-              </div>
-              <span className="text-2xl font-bold text-gray-900">
-                {activeGoals.length}
-              </span>
-            </div>
-            <h3 className="text-sm font-medium text-gray-600">Active Goals</h3>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass p-6 rounded-xl"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-green-600" />
-              </div>
-              <span className="text-2xl font-bold text-gray-900">
-                {completedGoals.length}
-              </span>
-            </div>
-            <h3 className="text-sm font-medium text-gray-600">Completed</h3>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="glass p-6 rounded-xl"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Zap className="h-6 w-6 text-purple-600" />
-              </div>
-              <span className="text-2xl font-bold text-gray-900">
-                {Math.round(
-                  (completedGoals.length / (goals.length || 1)) * 100,
-                )}
-                %
-              </span>
-            </div>
-            <h3 className="text-sm font-medium text-gray-600">Success Rate</h3>
-          </motion.div>
-        </div>
-
-        {/* Search & Create */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search your goals..."
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-            />
-          </div>
-          <button
-            onClick={() => router.push("/create-goal")}
-            className="group px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-xl transition transform hover:scale-105 flex items-center justify-center space-x-2 font-semibold"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Create Goal</span>
-          </button>
-        </div>
-
-        {/* Goals List */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
+          variants={container}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
         >
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Goals</h2>
+          <motion.div variants={item}>
+            <Card animated className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Active Goals
+                  </span>
+                  <Target className="w-5 h-5 text-primary" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {goals.filter((g) => g.status === "active").length}
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {goals.length} total goals
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : filteredGoals.length === 0 ? (
-            <div className="glass p-12 rounded-xl text-center">
-              <Target className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No goals yet
-              </h3>
-              <p className="text-gray-600 mb-6">
-                {searchQuery
-                  ? "No goals match your search"
-                  : "Create your first goal to get started with AI-powered planning"}
+          <motion.div variants={item}>
+            <Card animated className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Avg Progress
+                  </span>
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {calculateAverageProgress()}%
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Across all goals
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={item}>
+            <Card animated className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Longest Streak
+                  </span>
+                  <Calendar className="w-5 h-5 text-primary" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {calculateStreak()} days
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {calculateStreak() > 7 ? "🔥 Keep it up!" : "Keep going!"}
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+
+        {/* Goals Grid */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">Your Goals</h2>
+            {goals.length > 3 && <Button variant="ghost">View All</Button>}
+          </div>
+
+          {goals.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-12"
+            >
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4">
+                <Target className="w-10 h-10 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">No goals yet</h3>
+              <p className="text-muted-foreground mb-6">
+                Create your first goal to start your journey
               </p>
-              {!searchQuery && (
-                <button
-                  onClick={() => router.push("/create-goal")}
-                  className="px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition transform hover:scale-105"
-                >
+              <Link href="/create-goal">
+                <Button variant="gradient" size="lg">
+                  <Plus className="w-5 h-5 mr-2" />
                   Create Your First Goal
-                </button>
-              )}
-            </div>
+                </Button>
+              </Link>
+            </motion.div>
           ) : (
-            <div className="grid grid-cols-1 gap-6">
-              {filteredGoals.map((goal, index) => (
-                <motion.div
-                  key={goal._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  onClick={() => router.push(`/goal/${goal._id}`)}
-                  className="glass p-6 rounded-xl hover:shadow-xl transition cursor-pointer group"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-xl font-semibold text-gray-900 group-hover:text-indigo-600 transition">
+            <motion.div
+              variants={container}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              {goals.map((goal) => (
+                <motion.div key={goal._id} variants={item}>
+                  <Link href={`/goal/${goal._id}`}>
+                    <Card animated tilt className="cursor-pointer group h-full">
+                      <CardHeader>
+                        <CardTitle className="group-hover:text-primary transition-colors line-clamp-2">
                           {goal.title}
-                        </h3>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(
-                            goal.status,
-                          )}`}
-                        >
-                          {goal.status}
-                        </span>
-                      </div>
-                      <p className="text-gray-600 line-clamp-2">
-                        {goal.description}
-                      </p>
-                    </div>
-                  </div>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {/* Progress Bar */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm text-muted-foreground">
+                                Progress
+                              </span>
+                              <span className="text-sm font-semibold">
+                                {calculateProgress(goal)}%
+                              </span>
+                            </div>
+                            <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{
+                                  width: `${calculateProgress(goal)}%`,
+                                }}
+                                transition={{ duration: 1, ease: "easeOut" }}
+                                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-cyan-500 dark:to-blue-500 rounded-full"
+                              />
+                            </div>
+                          </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <div className="flex items-center space-x-6">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          {goal.duration} days
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600">
-                          {goal.plan?.length || 0} days planned
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      Created {formatDate(goal.createdAt)}
-                    </div>
-                  </div>
+                          {/* Stats */}
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              {calculateDaysActive(goal.createdAt)} days active
+                            </span>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                goal.status === "active"
+                                  ? "bg-green-500/10 text-green-500"
+                                  : goal.status === "completed"
+                                  ? "bg-blue-500/10 text-blue-500"
+                                  : "bg-yellow-500/10 text-yellow-500"
+                              }`}
+                            >
+                              {goal.status}
+                            </span>
+                          </div>
+
+                          {/* Additional Info */}
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{goal.duration} days plan</span>
+                            <span>{goal.hoursPerDay}h/day</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 </motion.div>
               ))}
-            </div>
+
+              {/* Add New Goal Card */}
+              <motion.div variants={item}>
+                <Link href="/create-goal">
+                  <Card
+                    animated
+                    className="cursor-pointer border-dashed border-2 hover:border-primary transition-colors h-full flex items-center justify-center min-h-[200px]"
+                  >
+                    <CardContent className="text-center">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                        <Plus className="w-8 h-8 text-primary" />
+                      </div>
+                      <h3 className="font-semibold mb-2">Create New Goal</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Start your journey to success
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            </motion.div>
           )}
-        </motion.div>
+        </div>
+
+        {/* AI Insights Section */}
+        {goals.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <Card className="glass-card border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <span>Quick Insights</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {goals.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.8 }}
+                      className="p-4 bg-primary/5 rounded-lg border border-primary/10"
+                    >
+                      <p className="text-sm">
+                        💡{" "}
+                        <strong>
+                          You have {goals.length} active goal
+                          {goals.length > 1 ? "s" : ""}!
+                        </strong>{" "}
+                        {calculateAverageProgress() > 50
+                          ? "Great progress! Keep maintaining this momentum."
+                          : "Stay consistent and track your progress daily for better results."}
+                      </p>
+                    </motion.div>
+                  )}
+
+                  {goals.some((g) => calculateProgress(g) > 70) && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 1.0 }}
+                      className="p-4 bg-primary/5 rounded-lg border border-primary/10"
+                    >
+                      <p className="text-sm">
+                        🎯 You&apos;re making excellent progress on{" "}
+                        <strong>
+                          {goals.find((g) => calculateProgress(g) > 70)?.title}
+                        </strong>
+                        . Keep up the great work!
+                      </p>
+                    </motion.div>
+                  )}
+
+                  {goals.length === 1 && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 1.2 }}
+                      className="p-4 bg-primary/5 rounded-lg border border-primary/10"
+                    >
+                      <p className="text-sm">
+                        📈 Consider adding more goals to diversify your learning
+                        journey and stay motivated!
+                      </p>
+                    </motion.div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </div>
     </div>
   );

@@ -1,489 +1,719 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
+  Sparkles,
+  RefreshCw,
+  Download,
+  Plus,
+  Target,
   Calendar,
   Clock,
   TrendingUp,
-  CheckCircle,
+  CheckCircle2,
   Circle,
   MessageSquare,
   Zap,
-  BarChart3,
-  Download,
-  RefreshCw,
-  Target,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { ProgressModal } from "@/components/ProgressModal";
+import { ConfettiEffect } from "@/components/ConfettiEffect";
+import { Loader } from "@/components/Loader";
+import { api } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
-import { useGoalStore } from "@/store/goalStore";
-import { formatDate, getDifficultyColor } from "@/lib/utils";
-import { exportGoalReport } from "@/lib/pdfExport";
-import ProgressModal from "@/components/ProgressModal";
 
-export default function GoalDetailPage() {
+interface DayPlan {
+  day: number;
+  task: string;
+  focus: string;
+  difficulty: string;
+  estimatedHours: number;
+  isRestDay?: boolean;
+}
+
+interface Goal {
+  _id: string;
+  title: string;
+  description?: string;
+  duration: number;
+  hoursPerDay: number;
+  status: string;
+  createdAt: string;
+  plan: DayPlan[];
+}
+
+interface Progress {
+  _id: string;
+  goalId: string;
+  day: number;
+  completed: boolean;
+  comment?: string;
+  date: string;
+}
+
+export default function GoalDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const params = useParams();
-  const goalId = params.id as string;
-
   const { isAuthenticated } = useAuthStore();
-  const {
-    goals,
-    progress,
-    insights,
-    stats,
-    fetchGoals,
-    fetchProgress,
-    fetchInsights,
-    fetchStats,
-    regeneratePlan,
-    isLoading,
-  } = useGoalStore();
-
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
-  const [trackingDay, setTrackingDay] = useState<number | null>(null);
-  const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false);
-  const [regenerateFeedback, setRegenerateFeedback] = useState("");
+  const [goal, setGoal] = useState<Goal | null>(null);
+  const [progress, setProgress] = useState<Progress[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [regenerateFeedback, setRegenerateFeedback] = useState("");
+  const [showRegenerateModal, setShowRegenerateModal] = useState(false);
+  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/login");
       return;
     }
-    fetchGoals();
-    if (goalId) {
-      fetchProgress(goalId);
-      fetchInsights(goalId);
-      fetchStats(goalId);
-    }
-  }, [
-    isAuthenticated,
-    goalId,
-    router,
-    fetchGoals,
-    fetchProgress,
-    fetchInsights,
-    fetchStats,
-  ]);
+    fetchGoalData();
+  }, [isAuthenticated, params.id, router]);
 
-  const goal = goals.find((g) => g._id === goalId);
-  const goalProgress = progress.filter((p) => p.goalId === goalId);
-  const goalInsights = insights.filter((i) => i.goalId === goalId);
-
-  const handleExportPDF = async () => {
-    if (!goalId) return;
-
-    setIsExporting(true);
+  const fetchGoalData = async () => {
     try {
-      await exportGoalReport(goalId);
-    } catch (error) {
-      console.error("Error exporting PDF:", error);
-      alert("Failed to export PDF. Please try again.");
+      setIsLoading(true);
+      setError("");
+      
+      const [goalRes, progressRes] = await Promise.all([
+        api.getGoal(params.id),
+        api.getProgressByGoal(params.id),
+      ]);
+
+      setGoal(goalRes.goal || goalRes);
+      setProgress(progressRes.progress || []);
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Failed to load goal");
+      console.error("Error fetching goal:", err);
     } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleTrackToday = () => {
-    if (!goal) return;
-
-    // Find the next incomplete day or the last day
-    const nextDay = goal.plan.find((day) => {
-      const dayProgress = goalProgress.find((p) => p.day === day.day);
-      return !dayProgress || !dayProgress.completed;
-    });
-
-    if (nextDay) {
-      setTrackingDay(nextDay.day);
-      setIsProgressModalOpen(true);
-    }
-  };
-
-  const handleTrackSpecificDay = (day: number) => {
-    setTrackingDay(day);
-    setIsProgressModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsProgressModalOpen(false);
-    setTrackingDay(null);
-    // Refresh progress data after closing modal
-    if (goalId) {
-      fetchProgress(goalId);
-      fetchStats(goalId);
+      setIsLoading(false);
     }
   };
 
   const handleRegeneratePlan = async () => {
-    if (!goalId) return;
-
-    setIsRegenerating(true);
     try {
-      await regeneratePlan(goalId, regenerateFeedback || undefined);
-      setIsRegenerateModalOpen(false);
+      setIsRegenerating(true);
+      await api.regenerateGoalPlan(params.id, regenerateFeedback || undefined);
+      await fetchGoalData();
+      setShowRegenerateModal(false);
       setRegenerateFeedback("");
-      // Refresh goal data
-      await fetchGoals();
-      alert(
-        "Plan regenerated successfully! Your roadmap has been updated based on your progress.",
-      );
-    } catch (error) {
-      console.error("Error regenerating plan:", error);
-      alert("Failed to regenerate plan. Please try again.");
+    } catch (err: any) {
+      alert(err.response?.data?.error || "Failed to regenerate plan");
     } finally {
       setIsRegenerating(false);
     }
   };
 
-  if (isLoading || !goal) {
+  const handleTrackProgress = (day: number) => {
+    // Check if previous day is completed (except for day 1)
+    if (day > 1) {
+      const previousDay = day - 1;
+      const previousDayProgress = progress.find((p) => p.day === previousDay);
+      if (!previousDayProgress || !previousDayProgress.completed) {
+        alert(`Please complete Day ${previousDay} before tracking Day ${day}`);
+        return;
+      }
+    }
+    
+    setSelectedDay(day);
+    setIsProgressModalOpen(true);
+  };
+
+  const handleProgressModalClose = () => {
+    setIsProgressModalOpen(false);
+    setSelectedDay(null);
+    setShowConfetti(true);
+    fetchGoalData(); // Refresh data
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      setIsDownloading(true);
+      await api.downloadGoalReport(params.id);
+    } catch (err: any) {
+      alert(err.response?.data?.error || "Failed to download PDF");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const calculateProgress = () => {
+    if (!goal) return 0;
+    const completedDays = progress.filter((p) => p.completed).length;
+    return Math.round((completedDays / goal.duration) * 100);
+  };
+
+  const calculateStreak = () => {
+    const sorted = [...progress]
+      .filter((p) => p.completed)
+      .sort((a, b) => b.day - a.day);
+    
+    let streak = 0;
+    for (const p of sorted) {
+      if (p.completed) streak++;
+      else break;
+    }
+    return streak;
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty?.toLowerCase()) {
+      case "easy":
+        return "bg-green-500/10 text-green-500 dark:bg-green-500/20";
+      case "medium":
+        return "bg-yellow-500/10 text-yellow-500 dark:bg-yellow-500/20";
+      case "hard":
+        return "bg-red-500/10 text-red-500 dark:bg-red-500/20";
+      default:
+        return "bg-primary/10 text-primary";
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading goal details...</p>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader message="Loading goal details..." size="lg" />
       </div>
     );
   }
 
-  const completedDays = goalProgress.filter((p) => p.completed).length;
-  const completionRate = Math.round((completedDays / goal.duration) * 100);
+  if (error || !goal) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center max-w-md"
+        >
+          <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Error Loading Goal</h2>
+          <p className="text-muted-foreground mb-6">
+            {error || "Goal not found"}
+          </p>
+          <Button onClick={() => router.push("/dashboard")} variant="gradient">
+            Back to Dashboard
+          </Button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  const completedDays = progress.filter((p) => p.completed).length;
+  const progressPercentage = calculateProgress();
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-indigo-50 via-white to-purple-50">
-      {/* Header */}
-      <div className="bg-white/50 backdrop-blur-xl border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div className="min-h-screen bg-background">
+      {/* Confetti Effect */}
+      <ConfettiEffect
+        isActive={showConfetti}
+        onComplete={() => setShowConfetti(false)}
+      />
+
+      {/* Navigation */}
+      <nav className="border-b bg-card/50 backdrop-blur-xl sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span className="font-medium">Back to Dashboard</span>
-            </button>
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => router.push(`/insights/${goalId}`)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition"
-                title="View Insights"
+            <Link href="/dashboard">
+              <Button variant="ghost" className="group">
+                <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+                Back to Dashboard
+              </Button>
+            </Link>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRegenerateModal(true)}
               >
-                <BarChart3 className="h-5 w-5 text-gray-600" />
-              </button>
-              <button
-                onClick={handleExportPDF}
-                disabled={isExporting}
-                className="p-2 rounded-lg hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Export PDF"
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Regenerate
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleDownloadPDF}
+                disabled={isDownloading}
               >
-                {isExporting ? (
-                  <div className="w-5 h-5 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+                {isDownloading ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"
+                    />
+                    Downloading...
+                  </>
                 ) : (
-                  <Download className="h-5 w-5 text-gray-600" />
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </>
                 )}
-              </button>
-              <button
-                onClick={() => setIsRegenerateModalOpen(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition"
-                title="Regenerate Plan"
-              >
-                <RefreshCw className="h-5 w-5 text-gray-600" />
-              </button>
+              </Button>
+              <ThemeToggle />
             </div>
           </div>
         </div>
-      </div>
+      </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Goal Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-2xl p-8 mb-8"
-        >
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-2">
-                <Target className="h-8 w-8 text-indigo-600" />
-                <h1 className="text-3xl font-bold text-gray-900">
-                  {goal.title}
-                </h1>
-              </div>
-              {goal.description && (
-                <p className="text-gray-600 text-lg mb-4">{goal.description}</p>
-              )}
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center space-x-2 text-gray-600">
-                  <Calendar className="h-5 w-5" />
-                  <span>{goal.duration} days</span>
-                </div>
-                <div className="flex items-center space-x-2 text-gray-600">
-                  <Clock className="h-5 w-5" />
-                  <span>{goal.hoursPerDay}h per day</span>
-                </div>
-                <div className="flex items-center space-x-2 text-gray-600">
-                  <span>Started {formatDate(goal.startDate)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-gray-700">
-                Overall Progress
-              </span>
-              <span className="text-sm font-bold text-indigo-600">
-                {completionRate}%
-              </span>
-            </div>
-            <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${completionRate}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-                className="h-full bg-linear-to-r from-indigo-600 to-purple-600"
-              />
-            </div>
-            <div className="flex justify-between mt-2 text-xs text-gray-500">
-              <span>
-                {completedDays} of {goal.duration} days completed
-              </span>
-              <span>{goal.duration - completedDays} days remaining</span>
-            </div>
-          </div>
-        </motion.div>
-
+      {/* Main Content */}
+      <div className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Day Plan List */}
-          <div className="lg:col-span-2">
-            <div className="glass rounded-2xl p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Daily Roadmap
-              </h2>
-              <div className="space-y-4">
-                {goal.plan.map((day, index) => {
-                  const dayProgress = goalProgress.find(
-                    (p) => p.day === day.day,
-                  );
-                  const isCompleted = dayProgress?.completed || false;
-
-                  return (
-                    <motion.div
-                      key={day.day}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      onClick={() => {
-                        setSelectedDay(day.day);
-                        handleTrackSpecificDay(day.day);
-                      }}
-                      className={`p-5 rounded-xl border-2 cursor-pointer transition ${
-                        selectedDay === day.day
-                          ? "border-indigo-500 bg-indigo-50"
-                          : isCompleted
-                            ? "border-green-200 bg-green-50"
-                            : "border-gray-200 bg-white hover:border-gray-300"
-                      }`}
-                    >
-                      <div className="flex items-start space-x-4">
-                        <div
-                          className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                            isCompleted
-                              ? "bg-green-500 text-white"
-                              : "bg-gray-200 text-gray-600"
-                          }`}
-                        >
-                          {isCompleted ? (
-                            <CheckCircle className="h-6 w-6" />
-                          ) : (
-                            <Circle className="h-6 w-6" />
-                          )}
+          {/* Left Column - Goal Details & Days */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Goal Header */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Card className="glass-card">
+                <CardHeader>
+                  <div className="flex items-start space-x-4">
+                    <div className="p-3 bg-primary/10 rounded-xl">
+                      <Target className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-3xl mb-2">{goal.title}</CardTitle>
+                      {goal.description && (
+                        <p className="text-muted-foreground text-lg">
+                          {goal.description}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-4 mt-4">
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <Calendar className="w-4 h-4" />
+                          <span>{goal.duration} days plan</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              Day {day.day}
-                            </h3>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(
-                                day.difficulty,
-                              )}`}
-                            >
-                              {day.difficulty}
-                            </span>
-                          </div>
-                          <p className="text-gray-900 font-medium mb-2">
-                            {day.task}
-                          </p>
-                          <p className="text-gray-600 mb-3">{day.focus}</p>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <div className="flex items-center space-x-1">
-                              <Clock className="h-4 w-4" />
-                              <span>{day.estimatedHours}h</span>
-                            </div>
-                            {dayProgress?.comment && (
-                              <div className="flex items-center space-x-1">
-                                <MessageSquare className="h-4 w-4" />
-                                <span>Has note</span>
-                              </div>
-                            )}
-                            {day.isRestDay && (
-                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                                Rest Day
-                              </span>
-                            )}
-                          </div>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <Clock className="w-4 h-4" />
+                          <span>{goal.hoursPerDay}h per day</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <span>Started {formatDate(goal.createdAt)}</span>
                         </div>
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-muted-foreground">
+                        Overall Progress
+                      </span>
+                      <span className="text-2xl font-bold text-primary">
+                        {progressPercentage}%
+                      </span>
+                    </div>
+                    <div className="h-4 bg-secondary rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progressPercentage}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-cyan-500 dark:to-blue-500 rounded-full relative"
+                      >
+                        <motion.div
+                          className="absolute inset-0"
+                          animate={{
+                            x: ["-100%", "100%"],
+                          }}
+                          transition={{
+                            duration: 1.5,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                          style={{
+                            background:
+                              "linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)",
+                          }}
+                        />
+                      </motion.div>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>
+                        {completedDays} of {goal.duration} days completed
+                      </span>
+                      <span>{goal.duration - completedDays} remaining</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Daily Roadmap */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Daily Roadmap</span>
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {completedDays}/{goal.duration} days
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <AnimatePresence>
+                      {goal.plan.map((day, index) => {
+                        const dayProgress = progress.find((p) => p.day === day.day);
+                        const isCompleted = dayProgress?.completed || false;
+                        
+                        // Check if previous day is completed
+                        const canAccess = day.day === 1 || progress.find((p) => p.day === day.day - 1)?.completed;
+
+                        return (
+                          <motion.div
+                            key={day.day}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            onClick={() => canAccess && handleTrackProgress(day.day)}
+                            className={`group ${canAccess ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+                          >
+                            <Card
+                              animated
+                              className={`border-2 transition-all ${
+                                isCompleted
+                                  ? "border-green-500/30 bg-green-500/5"
+                                  : canAccess
+                                  ? "border-border hover:border-primary/50"
+                                  : "border-border/50 bg-muted/30"
+                              }`}
+                            >
+                              <CardContent className="p-4">
+                                <div className="flex items-start space-x-4">
+                                  <div
+                                    className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                                      isCompleted
+                                        ? "bg-green-500 text-white"
+                                        : "bg-secondary text-muted-foreground"
+                                    }`}
+                                  >
+                                    {isCompleted ? (
+                                      <CheckCircle2 className="w-5 h-5" />
+                                    ) : (
+                                      <Circle className="w-5 h-5" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h3 className="font-semibold text-lg">
+                                        Day {day.day}
+                                      </h3>
+                                      <span
+                                        className={`px-2 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(
+                                          day.difficulty
+                                        )}`}
+                                      >
+                                        {day.difficulty}
+                                      </span>
+                                    </div>
+                                    <p className="font-medium mb-1">{day.task}</p>
+                                    <p className="text-sm text-muted-foreground mb-3">
+                                      {day.focus}
+                                    </p>
+                                    <div className="flex items-center flex-wrap gap-3 text-sm text-muted-foreground">
+                                      <div className="flex items-center space-x-1">
+                                        <Clock className="w-4 h-4" />
+                                        <span>{day.estimatedHours}h</span>
+                                      </div>
+                                      {dayProgress?.comment && (
+                                        <div className="flex items-center space-x-1">
+                                          <MessageSquare className="w-4 h-4" />
+                                          <span>Has note</span>
+                                        </div>
+                                      )}
+                                      {day.isRestDay && (
+                                        <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded text-xs font-medium">
+                                          Rest Day
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
 
-          {/* Sidebar - Stats & Insights */}
+          {/* Right Column - Stats & Actions */}
           <div className="space-y-6">
             {/* Stats Card */}
-            <div className="glass rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
-                Statistics
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                    </div>
-                    <span className="text-gray-700">Completed</span>
-                  </div>
-                  <span className="text-xl font-bold text-gray-900">
-                    {completedDays}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <TrendingUp className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <span className="text-gray-700">Progress</span>
-                  </div>
-                  <span className="text-xl font-bold text-gray-900">
-                    {completionRate}%
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Zap className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <span className="text-gray-700">Streak</span>
-                  </div>
-                  <span className="text-xl font-bold text-gray-900">
-                    {/* Calculate current streak */}
-                    {(() => {
-                      let streak = 0;
-                      const sorted = [...goalProgress].sort(
-                        (a, b) => b.day - a.day,
-                      );
-                      for (const p of sorted) {
-                        if (p.completed) streak++;
-                        else break;
-                      }
-                      return streak;
-                    })()}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Insights */}
-            {goalInsights.length > 0 && (
-              <div className="glass rounded-2xl p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">
-                  Latest Insights
-                </h3>
-                <div className="space-y-4">
-                  {goalInsights.slice(0, 3).map((insight) => (
-                    <div
-                      key={insight._id}
-                      className="border-l-4 border-indigo-500 pl-4"
-                    >
-                      <p className="text-sm text-gray-700 mb-2">
-                        {insight.summary}
-                      </p>
-                      <div className="flex items-center space-x-2 text-xs text-gray-500">
-                        <span>Week {insight.weekNumber}</span>
-                        <span>•</span>
-                        <span>{formatDate(insight.createdAt)}</span>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle>Statistics</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-green-500/10 rounded-lg">
+                        <CheckCircle2 className="w-5 h-5 text-green-500" />
                       </div>
+                      <span className="text-muted-foreground">Completed</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                    <span className="text-2xl font-bold">{completedDays}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-500/10 rounded-lg">
+                        <TrendingUp className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <span className="text-muted-foreground">Progress</span>
+                    </div>
+                    <span className="text-2xl font-bold">
+                      {progressPercentage}%
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-purple-500/10 rounded-lg">
+                        <Zap className="w-5 h-5 text-purple-500" />
+                      </div>
+                      <span className="text-muted-foreground">Streak</span>
+                    </div>
+                    <span className="text-2xl font-bold">
+                      {calculateStreak()}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {/* Quick Actions */}
-            <div className="glass rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
-                Quick Actions
-              </h3>
-              <div className="space-y-3">
-                <button
-                  onClick={handleTrackToday}
-                  className="w-full px-4 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition font-medium"
-                >
-                  Track Today&apos;s Progress
-                </button>
-                <button
-                  onClick={() => router.push(`/insights/${goalId}`)}
-                  className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
-                >
-                  View All Insights
-                </button>
-                <button
-                  onClick={handleExportPDF}
-                  disabled={isExporting}
-                  className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isExporting ? "Generating PDF..." : "Export PDF Report"}
-                </button>
-              </div>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button
+                    variant="gradient"
+                    className="w-full"
+                    size="lg"
+                    onClick={() => {
+                      const nextDay = goal.plan.find(
+                        (d) => !progress.find((p) => p.day === d.day && p.completed)
+                      );
+                      if (nextDay) handleTrackProgress(nextDay.day);
+                    }}
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Track Today&apos;s Progress
+                  </Button>
+                  <Link href={`/insights/${params.id}`} className="block">
+                    <Button variant="outline" className="w-full">
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      View AI Insights
+                    </Button>
+                  </Link>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={handleDownloadPDF}
+                    disabled={isDownloading}
+                  >
+                    {isDownloading ? (
+                      <>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"
+                        />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Export PDF Report
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* AI Insights */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card className="glass-card border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    <span>Aivora Says</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6, duration: 1 }}
+                    className="text-muted-foreground leading-relaxed"
+                  >
+                    {progressPercentage < 30 && (
+                      <>
+                        🚀 You&apos;re just getting started! Focus on building a
+                        consistent daily habit. Even 30 minutes of focused work makes a
+                        difference.
+                      </>
+                    )}
+                    {progressPercentage >= 30 && progressPercentage < 70 && (
+                      <>
+                        💪 Great momentum! You&apos;re {progressPercentage}% through
+                        your goal. Keep up the consistency and don&apos;t hesitate to
+                        adjust the plan if needed.
+                      </>
+                    )}
+                    {progressPercentage >= 70 && progressPercentage < 100 && (
+                      <>
+                        🎉 Outstanding progress! You&apos;re in the final stretch at{" "}
+                        {progressPercentage}%. Maintain your streak and finish strong!
+                      </>
+                    )}
+                    {progressPercentage === 100 && (
+                      <>
+                        🏆 Congratulations! You&apos;ve completed your {goal.duration}-day journey! 
+                        Take a moment to celebrate, then consider setting your next goal.
+                      </>
+                    )}
+                  </motion.p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Completion Card */}
+            {progressPercentage === 100 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Card className="glass-card border-green-500/30 bg-gradient-to-br from-green-500/10 to-emerald-500/5">
+                  <CardContent className="p-6 text-center">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 20,
+                        delay: 0.7,
+                      }}
+                      className="w-20 h-20 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center"
+                    >
+                      <CheckCircle2 className="w-12 h-12 text-green-500" />
+                    </motion.div>
+                    <h3 className="text-2xl font-bold mb-2">
+                      Goal Completed! 🎉
+                    </h3>
+                    <p className="text-muted-foreground mb-4">
+                      Congratulations on completing your {goal.duration}-day journey!
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      <Link href="/create-goal">
+                        <Button variant="gradient" size="lg" className="w-full">
+                          Create New Goal
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={handleDownloadPDF}
+                        disabled={isDownloading}
+                      >
+                        {isDownloading ? (
+                          <>
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              className="w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"
+                            />
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4 mr-2" />
+                            View Completion Report
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Progress Modal */}
-      {trackingDay && (
+      {selectedDay && (
         <ProgressModal
           isOpen={isProgressModalOpen}
-          onClose={handleCloseModal}
-          goalId={goalId}
-          day={trackingDay}
-          existingProgress={goalProgress.find((p) => p.day === trackingDay)}
+          onClose={handleProgressModalClose}
+          goalId={params.id}
+          day={selectedDay}
+          onSuccess={() => {
+            setShowConfetti(true);
+          }}
         />
       )}
 
       {/* Regenerate Plan Modal */}
       <AnimatePresence>
-        {isRegenerateModalOpen && (
+        {showRegenerateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsRegenerateModalOpen(false)}
+              onClick={() => setShowRegenerateModal(false)}
               className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             />
 
@@ -492,25 +722,25 @@ export default function GoalDetailPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative glass rounded-2xl shadow-2xl p-8 max-w-lg w-full"
+              className="relative glass-card rounded-2xl shadow-2xl p-8 max-w-lg w-full"
             >
               <div className="mb-6">
                 <div className="flex items-center space-x-3 mb-2">
-                  <div className="p-3 bg-indigo-100 rounded-lg">
-                    <RefreshCw className="h-6 w-6 text-indigo-600" />
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <RefreshCw className="h-6 w-6 text-primary" />
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h2 className="text-2xl font-bold">
                     Regenerate Plan
                   </h2>
                 </div>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   AI will analyze your progress and create an updated roadmap
                   for the remaining days.
                 </p>
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold mb-2">
                   Feedback (Optional)
                 </label>
                 <textarea
@@ -518,30 +748,18 @@ export default function GoalDetailPage() {
                   onChange={(e) => setRegenerateFeedback(e.target.value)}
                   placeholder="Any specific adjustments or feedback for the AI? (e.g., 'Make it more challenging', 'Add more practice time', etc.)"
                   rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none text-gray-900"
+                  className="w-full px-4 py-3 border border-input rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                 />
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
                 <div className="flex items-start space-x-3">
-                  <div className="shrink-0">
-                    <svg
-                      className="h-5 w-5 text-yellow-600"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
+                  <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="text-sm font-semibold text-yellow-900 mb-1">
+                    <h3 className="text-sm font-semibold mb-1">
                       This will update your remaining roadmap
                     </h3>
-                    <p className="text-sm text-yellow-800">
+                    <p className="text-sm text-muted-foreground">
                       Completed days will remain unchanged. Only future days
                       will be regenerated based on your progress.
                     </p>
@@ -550,32 +768,34 @@ export default function GoalDetailPage() {
               </div>
 
               <div className="flex items-center space-x-3">
-                <button
+                <Button
                   type="button"
                   onClick={() => {
-                    setIsRegenerateModalOpen(false);
+                    setShowRegenerateModal(false);
                     setRegenerateFeedback("");
                   }}
                   disabled={isRegenerating}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium disabled:opacity-50"
+                  variant="outline"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={handleRegeneratePlan}
                   disabled={isRegenerating}
-                  className="flex-1 px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-xl transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  variant="gradient"
+                  className="flex-1"
                 >
                   {isRegenerating ? (
                     <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block mr-2" />
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                       Regenerating...
                     </>
                   ) : (
                     "Regenerate Plan"
                   )}
-                </button>
+                </Button>
               </div>
             </motion.div>
           </div>

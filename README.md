@@ -1,112 +1,96 @@
-# 🎯 Aivora Frontend
+# 🎯 Aivora Frontend v2
 
-A beautiful, modern Next.js 14 application for AI-powered goal planning and progress tracking.
+A premium, next-generation AI-powered goal intelligence system built with Next.js 14, featuring stunning animations and glassmorphism design.
 
-## 🚀 Tech Stack
+## ✨ Features
+
+### 🎨 Design & Animations
+- **Glassmorphism UI**: Beautiful glass cards with backdrop blur effects
+- **3D Tilt Effects**: Interactive card hover animations with mouse tracking
+- **Staggered Animations**: Smooth, sequential page load animations
+- **Rewarding Interactions**: Animated checkboxes, strike-through effects, and confetti celebrations
+- **Gradient Backgrounds**: Dynamic animated orbs and gradient overlays
+- **Dark/Light Mode**: Seamless theme switching with custom color palettes
+
+### 📄 Pages
+
+#### Landing Page (`/`)
+- Hero section with animated gradient background
+- Floating orb animations
+- Feature showcase with hover effects
+- CTA buttons with gradient styling
+
+#### Dashboard (`/dashboard`)
+- Staggered card animations on load
+- 3D tilt effects on goal cards
+- Real-time progress tracking
+- AI insights panel
+- Statistics overview
+
+#### Auth Pages
+- **Login** (`/login`): Glassmorphism form with animated background
+- **Register** (`/register`): Full registration flow with validation
+
+#### Goal Management
+- **Create Goal** (`/create-goal`): AI-powered goal creation with animated button states
+- **Goal Detail** (`/goal/[id]`): 
+  - Animated checkboxes with spring effects
+  - Strike-through animation on task completion
+  - Smooth progress bar transitions
+  - Confetti celebration on task completion
+  - Daily progress modal with form submission
+
+### 🎭 Animations & Effects
+
+#### Button States
+- **Generate Plan Button**: Transforms through 3 states:
+  1. Normal → Shrinks to circle
+  2. Shows loading spinner
+  3. Displays success checkmark
+  4. Navigates to goal page
+
+#### Task Completion
+- Checkbox animates with rotation and scale
+- Text gets strike-through with smooth wipe animation
+- Task container highlights with green glow
+- Confetti celebration triggers
+
+#### Progress Bar
+- Smooth fill animation from 0 to current percentage
+- Shimmer effect overlay
+- Real-time updates on task completion
+
+#### Modal Transitions
+- Smooth backdrop blur fade-in
+- Spring animation for modal entrance
+- Success state with animated checkmark drawing
+
+## 🛠️ Tech Stack
 
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
-- **State Management**: Zustand
 - **Animations**: Framer Motion
-- **Charts**: Recharts
-- **Icons**: Lucide React
+- **UI Components**: Radix UI
+- **State Management**: Zustand
 - **HTTP Client**: Axios
-- **PDF Export**: jsPDF
+- **Theme**: next-themes
+- **Icons**: Lucide React
+- **Effects**: react-confetti
 
-## 📁 Project Structure
-
-```
-frontend/
-├── src/
-│   ├── app/                    # Next.js 14 App Router pages
-│   │   ├── page.tsx           # Landing page
-│   │   ├── login/             # Login page
-│   │   ├── register/          # Registration page
-│   │   ├── dashboard/         # User dashboard
-│   │   ├── create-goal/       # Goal creation wizard
-│   │   ├── goal/[id]/         # Goal detail & roadmap
-│   │   └── insights/[id]/     # Analytics & AI insights
-│   ├── components/            # Reusable components
-│   │   ├── AuthProvider.tsx   # Auth initialization
-│   │   └── ProgressModal.tsx  # Progress tracking modal
-│   ├── lib/                   # Utilities
-│   │   ├── api.ts            # API client with interceptors
-│   │   ├── pdfExport.ts      # PDF generation
-│   │   └── utils.ts          # Helper functions
-│   ├── store/                 # Zustand state management
-│   │   ├── authStore.ts      # Authentication state
-│   │   ├── goalStore.ts      # Goals & progress state
-│   │   └── uiStore.ts        # UI state
-│   └── types/                 # TypeScript definitions
-└── public/                    # Static assets
-```
-
-## 🎨 Features
-
-### ✨ User Interface
-
-- **Glassmorphism Design** - Modern frosted glass aesthetic
-- **Smooth Animations** - Framer Motion powered transitions
-- **Responsive Layout** - Mobile-first design
-- **Custom Scrollbars** - Gradient purple scrollbars
-- **Dark Text Inputs** - Fully visible input fields
-
-### 🔐 Authentication
-
-- **Secure Login/Register** - JWT token-based auth
-- **Persistent Sessions** - LocalStorage with auto-refresh
-- **Protected Routes** - Automatic redirect to login
-- **Token Management** - Auto-sync across app refresh
-
-### 📊 Goal Management
-
-- **AI-Powered Planning** - 30-day structured roadmaps
-- **Progress Tracking** - Daily task completion
-- **Sentiment Analysis** - AI analyzes your mood
-- **Visual Analytics** - Charts and stats
-- **PDF Export** - Professional progress reports
-
-### 🤖 AI Features
-
-- **Goal Planner** - Generates personalized roadmaps
-- **Insight Analyzer** - Weekly progress insights
-- **Plan Regeneration** - Adaptive roadmap updates
-- **Sentiment Detection** - Mood trend analysis
-
-## ⚙️ Installation
-
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- Backend API running (see backend README)
-
-### Setup
-
-1. **Install dependencies**:
+## 📦 Installation
 
 ```bash
+# Install dependencies
 npm install
-```
 
-2. **Configure environment**:
-   Create `.env.local` file:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-```
-
-3. **Run development server**:
-
-```bash
+# Run development server
 npm run dev
-```
 
-4. **Build for production**:
-
-```bash
+# Build for production
 npm run build
+
+# Start production server
 npm start
 ```
 
@@ -114,204 +98,176 @@ npm start
 
 ### Environment Variables
 
-| Variable              | Description     | Default                     |
-| --------------------- | --------------- | --------------------------- |
-| `NEXT_PUBLIC_API_URL` | Backend API URL | `http://localhost:5000/api` |
+Create a `.env.local` file:
 
-### API Client
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+```
 
-The API client (`src/lib/api.ts`) includes:
+### Theme Configuration
 
-- **Automatic token injection** from localStorage
-- **401 error handling** with redirect
-- **Request/response interceptors**
-- **Type-safe API methods**
+The theme uses CSS variables for easy customization. Edit `src/app/globals.css`:
 
-## 📚 Key Components
+```css
+:root {
+  --primary: 239 84% 67%;  /* Indigo for light mode */
+  --accent: 271 91% 65%;   /* Violet for light mode */
+}
 
-### AuthProvider
+.dark {
+  --primary: 189 94% 43%;  /* Cyan for dark mode */
+  --accent: 189 94% 43%;   /* Blue for dark mode */
+}
+```
 
-Initializes authentication state on app load:
+## 🎯 Key Components
 
+### UI Components (`src/components/ui/`)
+- `button.tsx` - Animated buttons with variants
+- `card.tsx` - 3D tilt card with hover effects
+- `checkbox.tsx` - Animated checkbox with spring effect
+- `input.tsx` - Styled input fields
+- `label.tsx` - Form labels
+
+### Feature Components
+- `ThemeToggle.tsx` - Animated theme switcher
+- `ThemeProvider.tsx` - Theme context provider
+- `ProgressModal.tsx` - Daily progress submission modal
+- `ConfettiEffect.tsx` - Celebration confetti component
+
+### Stores (`src/store/`)
+- `authStore.ts` - Authentication state management
+- `goalStore.ts` - Goal data management
+
+### API Client (`src/lib/`)
+- `api.ts` - Axios instance with interceptors
+- `utils.ts` - Utility functions (cn for className merging)
+
+## 🎨 Design System
+
+### Colors
+
+**Light Mode**:
+- Background: White with gray tint
+- Cards: Glass panels with white blur
+- Accent: Indigo/Violet gradient
+
+**Dark Mode**:
+- Background: Charcoal/Deep Navy
+- Cards: Translucent with neon borders
+- Accent: Cyan/Electric Blue gradient
+
+### Animations
+
+All animations follow these principles:
+- **Duration**: 0.3-0.6s for UI interactions
+- **Easing**: Spring for organic feel, ease-out for exits
+- **Stagger**: 0.1s delay between sequential items
+- **Hover**: Subtle lift (y: -5px) with shadow increase
+
+### Spacing
+- Container: 2rem padding
+- Cards: 1.5rem (24px) padding
+- Sections: 2rem (32px) margin-bottom
+- Rounded corners: 2xl (1rem)
+
+## 🚀 Workflow
+
+### User Journey
+
+1. **Landing** → User sees hero with CTA
+2. **Register/Login** → Glassmorphism auth forms
+3. **Dashboard** → Staggered card animations show goals
+4. **Create Goal** → AI generates plan with button animation
+5. **Goal Detail** → Track progress with rewarding interactions
+6. **Daily Progress** → Add comments via modal
+7. **Task Completion** → Confetti + strike-through animation
+
+### Form Submissions
+
+All forms include:
+- Input validation
+- Loading states with spinners
+- Error handling with animations
+- Success feedback with transitions
+
+## 📱 Responsive Design
+
+- Mobile-first approach
+- Breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
+- Touch-friendly tap targets (min 44px)
+- Optimized animations for mobile performance
+
+## 🎬 Animation Showcase
+
+### Page Load
 ```tsx
-// Wraps entire app in layout.tsx
-<AuthProvider>{children}</AuthProvider>
+// Staggered container animation
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
 ```
 
-### ProgressModal
-
-Reusable modal for tracking daily progress:
-
-- Task completion toggle
-- Hours spent tracking
-- Notes with sentiment analysis
-- Quick-select hour buttons
-
-### State Management
-
-**Auth Store** (`authStore.ts`):
-
-```typescript
-- user: User | null
-- isAuthenticated: boolean
-- login(email, password)
-- register(name, email, password)
-- logout()
-- checkAuth()
+### Button Transform
+```tsx
+// Generate button states
+"input" → "generating" → "success" → navigate
 ```
 
-**Goal Store** (`goalStore.ts`):
-
-```typescript
-- goals: Goal[]
-- progress: Progress[]
-- insights: Insight[]
-- createGoal(data)
-- updateProgress(data)
-- regeneratePlan(goalId, feedback)
-- generateInsights(goalId)
+### Task Completion
+```tsx
+// Multi-step animation
+1. Checkbox scale & rotate
+2. Strike-through wipe (scaleX: 0 → 1)
+3. Background flash green
+4. Confetti celebration
 ```
 
-## 🎯 Usage Examples
+## 🔐 Authentication
 
-### Creating a Goal
+- JWT token stored in Zustand with persistence
+- Automatic token refresh on API calls
+- Protected routes redirect to login
+- Auth state persists across sessions
 
-```typescript
-await createGoal({
-  title: "Learn React",
-  description: "Master React fundamentals",
-  duration: 30,
-  hoursPerDay: 2,
-});
-// AI generates 30-day roadmap automatically
-```
+## 🌐 API Integration
 
-### Tracking Progress
+All endpoints connect to the existing backend:
 
-```typescript
-await updateProgress({
-  goalId: "goal_id",
-  day: 1,
-  completed: true,
-  hoursSpent: 2.5,
-  comment: "Great start! Completed setup.",
-});
-// AI analyzes sentiment automatically
-```
+- `POST /auth/login` - User login
+- `POST /auth/register` - User registration
+- `GET /goals` - Fetch all goals
+- `POST /goals` - Create new goal
+- `GET /goals/:id` - Get goal details
+- `POST /progress` - Add daily progress
+- `GET /insights/:goalId` - Get AI insights
 
-### Generating Insights
+## 📝 Future Enhancements
 
-```typescript
-await generateInsights(goalId);
-// Returns: summary, mood trend, motivation level, blockers, recommendations
-```
-
-## 🎨 Styling
-
-### Custom Scrollbars
-
-```css
-/* Gradient purple scrollbar */
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-}
-```
-
-### Glass Effect
-
-```css
-.glass {
-  @apply bg-white/70 backdrop-blur-md border border-white/20;
-}
-```
-
-### Modal Scrollbar
-
-```css
-/* Thinner, subtle scrollbar for modals */
-.modal-scroll::-webkit-scrollbar {
-  width: 6px;
-  background: rgba(139, 92, 246, 0.4);
-}
-```
-
-## 🔒 Security
-
-- **JWT tokens** stored in localStorage with key `auth_token`
-- **Automatic token refresh** on app initialization
-- **Protected routes** redirect to login if unauthenticated
-- **Token expiration** handled with 401 interceptor
-- **HTTPS recommended** for production
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
-
-```bash
-npm run build
-vercel --prod
-```
-
-### Docker
-
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
-### Environment Variables in Production
-
-Ensure `NEXT_PUBLIC_API_URL` points to your production backend.
-
-## 📊 Performance
-
-- **Code Splitting** - Automatic with Next.js
-- **Image Optimization** - Next.js Image component
-- **Lazy Loading** - Dynamic imports for charts
-- **Bundle Size** - ~200KB gzipped
-
-## 🐛 Troubleshooting
-
-### Issue: Logged out on refresh
-
-**Solution**: Check that `AuthProvider` is wrapping your app in `layout.tsx`
-
-### Issue: API requests failing
-
-**Solution**: Verify `NEXT_PUBLIC_API_URL` is set correctly
-
-### Issue: Input text not visible
-
-**Solution**: All inputs now have `text-gray-900` class
-
-### Issue: Charts not rendering
-
-**Solution**: Ensure `recharts` is installed: `npm install recharts`
+- [ ] Page transitions with AnimatePresence
+- [ ] Animated heatmap visualization
+- [ ] PDF report generation
+- [ ] Real-time notifications
+- [ ] Goal sharing functionality
+- [ ] Advanced analytics dashboard
+- [ ] Streak tracking with gamification
 
 ## 🤝 Contributing
 
-1. Follow the existing code structure
-2. Use TypeScript for type safety
-3. Follow Tailwind CSS conventions
-4. Add proper error handling
-5. Test on multiple screen sizes
+This is a custom build. For modifications:
+1. Follow the existing animation patterns
+2. Use Framer Motion for all animations
+3. Maintain glassmorphism aesthetic
+4. Test both light and dark modes
 
-## 📝 License
+## 📄 License
 
-MIT License - See LICENSE file for details
-
-## 🔗 Related
-
-- [Backend README](../backend/README.md)
-- [API Documentation](../API_DOCUMENTATION.md)
-- [Project Overview](../README.md)
+Private project for Aivora.
 
 ---
 
-Built with ❤️ using Next.js 14 and AI
+Built with 💜 using Next.js, Framer Motion, and lots of attention to detail.
