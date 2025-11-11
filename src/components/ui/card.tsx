@@ -17,11 +17,11 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
       if (!tilt || !cardRef.current) return;
-      
+
       const rect = cardRef.current.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width;
       const y = (e.clientY - rect.top) / rect.height;
-      
+
       setMousePosition({ x, y });
     };
 
@@ -31,6 +31,9 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
 
     const tiltX = tilt ? (mousePosition.y - 0.5) * 10 : 0;
     const tiltY = tilt ? -(mousePosition.x - 0.5) * 10 : 0;
+
+    // Filter out props that conflict with framer-motion
+    const { onDrag, onDragStart, onDragEnd, ...filteredProps } = props as any;
 
     if (animated) {
       return (
@@ -48,14 +51,16 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
           onMouseLeave={handleMouseLeave}
           whileHover={{ y: -5, transition: { duration: 0.2 } }}
           style={{
-            transform: tilt ? `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)` : undefined,
+            transform: tilt
+              ? `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`
+              : undefined,
             transition: "transform 0.1s ease-out",
           }}
           className={cn(
             "rounded-2xl border bg-card text-card-foreground shadow-lg hover:shadow-xl transition-all",
             className
           )}
-          {...props}
+          {...filteredProps}
         >
           {children}
         </motion.div>
@@ -137,4 +142,11 @@ const CardFooter = React.forwardRef<
 ));
 CardFooter.displayName = "CardFooter";
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardDescription,
+  CardContent,
+};
