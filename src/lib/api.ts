@@ -69,6 +69,11 @@ class ApiClient {
     const response = await this.axiosInstance.post("/auth/login", data);
     if (response.data.token) {
       this.setToken(response.data.token);
+      // Also sync with zustand store
+      if (typeof window !== 'undefined') {
+        const { setToken } = await import('@/store/authStore').then(m => m.useAuthStore.getState());
+        setToken(response.data.token);
+      }
     }
     return response.data;
   }

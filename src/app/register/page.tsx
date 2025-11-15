@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { Brain, ArrowRight, User, Mail, Lock } from "lucide-react";
+import { Brain, ArrowRight, User, Mail, Lock, CheckCircle, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { authAPI } from "@/lib/api";
@@ -200,9 +200,46 @@ export default function RegisterPage() {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="pl-10"
+                    className={`pl-10 pr-10 ${
+                      formData.confirmPassword && formData.password === formData.confirmPassword
+                        ? "border-green-500 focus-visible:ring-green-500"
+                        : formData.confirmPassword && formData.password !== formData.confirmPassword
+                        ? "border-red-500 focus-visible:ring-red-500"
+                        : ""
+                    }`}
                   />
+                  {formData.confirmPassword && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {formData.password === formData.confirmPassword ? (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 300 }}
+                        >
+                          <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 300 }}
+                        >
+                          <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                        </motion.div>
+                      )}
+                    </div>
+                  )}
                 </div>
+                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                  <p className="text-xs text-red-500">Passwords do not match</p>
+                )}
+                {formData.confirmPassword && formData.password === formData.confirmPassword && (
+                  <p className="text-xs text-green-500">Passwords match</p>
+                )}
               </div>
 
               <Button

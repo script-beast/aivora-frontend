@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +15,16 @@ export function ThemeToggle() {
     setMounted(true);
   }, []);
 
+  // Add smooth transition class to html element
+  const handleThemeChange = () => {
+    const html = document.documentElement;
+    html.classList.add('theme-transition');
+    setTheme(theme === "light" ? "dark" : "light");
+    setTimeout(() => {
+      html.classList.remove('theme-transition');
+    }, 300);
+  };
+
   if (!mounted) {
     return null;
   }
@@ -23,17 +33,32 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-      className="relative"
+      onClick={handleThemeChange}
+      className="relative overflow-hidden"
     >
-      <motion.div
-        initial={false}
-        animate={{ rotate: theme === "dark" ? 180 : 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-        <Moon className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-5 w-5 rotate-180 scale-0 transition-all dark:rotate-180 dark:scale-100" />
-      </motion.div>
+      <AnimatePresence mode="wait" initial={false}>
+        {theme === "light" ? (
+          <motion.div
+            key="sun"
+            initial={{ y: -20, opacity: 0, rotate: -90 }}
+            animate={{ y: 0, opacity: 1, rotate: 0 }}
+            exit={{ y: 20, opacity: 0, rotate: 90 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            <Sun className="h-5 w-5" />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="moon"
+            initial={{ y: -20, opacity: 0, rotate: -90 }}
+            animate={{ y: 0, opacity: 1, rotate: 0 }}
+            exit={{ y: 20, opacity: 0, rotate: 90 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            <Moon className="h-5 w-5" />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <span className="sr-only">Toggle theme</span>
     </Button>
   );

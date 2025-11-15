@@ -91,4 +91,11 @@
   .gradient-glow {
     @apply bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 dark:from-cyan-500 dark:via-blue-500 dark:to-purple-500;
   }
+  
+  .theme-transition,
+  .theme-transition *,
+  .theme-transition *::before,
+  .theme-transition *::after {
+    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, color 0.3s ease-in-out !important;
+  }
 }

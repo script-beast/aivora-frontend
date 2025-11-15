@@ -20,11 +20,14 @@ import {
   Zap,
   Loader2,
   AlertCircle,
+  Menu,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ProgressModal } from "@/components/ProgressModal";
+import { CompletedTasksModal } from "@/components/CompletedTasksModal";
 import { ConfettiEffect } from "@/components/ConfettiEffect";
 import { Loader } from "@/components/Loader";
 import { api } from "@/lib/api";
@@ -73,6 +76,8 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [selectedCompletedDay, setSelectedCompletedDay] = useState<number | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -134,16 +139,42 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
   const handleProgressModalClose = () => {
     setIsProgressModalOpen(false);
     setSelectedDay(null);
-    setShowConfetti(true);
     fetchGoalData(); // Refresh data
+  };
+  
+  const handleProgressSuccess = () => {
+    setShowConfetti(true);
   };
 
   const handleDownloadPDF = async () => {
     try {
       setIsDownloading(true);
-      await api.downloadGoalReport(params.id);
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const reportUrl = `${baseUrl}/pdf/goal/${params.id}/report`;
+      const token = localStorage.getItem('auth_token');
+      
+      const response = await fetch(reportUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `goal-report-${params.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (err: any) {
-      alert(err.response?.data?.error || "Failed to download PDF");
+      console.error('PDF generation error:', err);
+      alert(err.message || "Failed to download PDF");
     } finally {
       setIsDownloading(false);
     }
@@ -231,15 +262,18 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
 
       {/* Navigation */}
       <nav className="border-b bg-card/50 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <Link href="/dashboard">
               <Button variant="ghost" className="group">
                 <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-                Back to Dashboard
+                <span className="hidden sm:inline">Back to Dashboard</span>
+                <span className="sm:hidden">Back</span>
               </Button>
             </Link>
-            <div className="flex items-center space-x-2">
+            
+            {/* Desktop Menu */}
+            <div className="hidden sm:flex items-center space-x-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -272,13 +306,96 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
               </Button>
               <ThemeToggle />
             </div>
+            
+            {/* Mobile Menu Button */}
+            <div className="flex sm:hidden items-center space-x-2">
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </Button>
+            </div>
           </div>
+          
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="sm:hidden pt-4 pb-2 border-t mt-3 space-y-2"
+            >
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => {
+                  setShowRegenerateModal(true);
+                  setMobileMenuOpen(false);
+                }}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Regenerate Plan
+              </Button>
+              <Button 
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => {
+                  handleDownloadPDF();
+                  setMobileMenuOpen(false);
+                }}
+                disabled={isDownloading}
+              >
+                {isDownloading ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"
+                    />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export PDF
+                  </>
+                )}
+              </Button>
+            </motion.div>
+          )}
         </div>
       </nav>
 
       {/* Main Content */}
-      <div className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {/* Testing Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <div className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 dark:from-cyan-500/10 dark:via-blue-500/10 dark:to-purple-500/10 border-2 border-blue-500/20 dark:border-cyan-500/20 rounded-xl p-3 sm:p-4 shadow-lg">
+            <div className="flex items-start space-x-3">
+              <div className="p-2 bg-blue-500/20 dark:bg-cyan-500/20 rounded-lg shrink-0">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-cyan-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm sm:text-base font-semibold text-blue-900 dark:text-cyan-100 mb-1">
+                  📋 Testing Mode Active
+                </h3>
+                <p className="text-xs sm:text-sm text-blue-700/80 dark:text-cyan-200/80">
+                  This is a testing environment. You can complete all tasks on the same day to test the full workflow. 
+                  In production, tasks would be unlocked day by day.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Left Column - Goal Details & Days */}
           <div className="lg:col-span-2 space-y-6">
             {/* Goal Header */}
@@ -288,20 +405,20 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
             >
               <Card className="glass-card">
                 <CardHeader>
-                  <div className="flex items-start space-x-4">
-                    <div className="p-3 bg-primary/10 rounded-xl">
-                      <Target className="w-6 h-6 text-primary" />
+                  <div className="flex items-start space-x-3 sm:space-x-4">
+                    <div className="p-2 sm:p-3 bg-primary/10 rounded-xl">
+                      <Target className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                     </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-3xl mb-2">{goal.title}</CardTitle>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-xl sm:text-2xl md:text-3xl mb-2 truncate">{goal.title}</CardTitle>
                       {goal.description && (
-                        <p className="text-muted-foreground text-lg">
+                        <p className="text-muted-foreground text-sm sm:text-base md:text-lg">
                           {goal.description}
                         </p>
                       )}
-                      <div className="flex flex-wrap gap-4 mt-4">
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <Calendar className="w-4 h-4" />
+                      <div className="flex flex-wrap gap-3 sm:gap-4 mt-4">
+                        <div className="flex items-center space-x-2 text-xs sm:text-sm text-muted-foreground">
+                          <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                           <span>{goal.duration} days plan</span>
                         </div>
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
@@ -392,8 +509,14 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.05 }}
-                            onClick={() => canAccess && handleTrackProgress(day.day)}
-                            className={`group ${canAccess ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+                            onClick={() => {
+                              if (isCompleted) {
+                                setSelectedCompletedDay(day.day);
+                              } else if (canAccess) {
+                                handleTrackProgress(day.day);
+                              }
+                            }}
+                            className={`group ${isCompleted ? 'cursor-pointer' : canAccess ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
                           >
                             <Card
                               animated
@@ -698,9 +821,17 @@ export default function GoalDetailPage({ params }: { params: { id: string } }) {
           onClose={handleProgressModalClose}
           goalId={params.id}
           day={selectedDay}
-          onSuccess={() => {
-            setShowConfetti(true);
-          }}
+          onSuccess={handleProgressSuccess}
+        />
+      )}
+
+      {/* Completed Task Details Modal */}
+      {selectedCompletedDay && (
+        <CompletedTasksModal
+          isOpen={selectedCompletedDay !== null}
+          onClose={() => setSelectedCompletedDay(null)}
+          progress={progress.filter(p => p.day === selectedCompletedDay)}
+          plan={goal?.plan || []}
         />
       )}
 

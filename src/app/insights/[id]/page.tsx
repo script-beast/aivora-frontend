@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,11 @@ import {
   Sparkles,
   Activity,
   BarChart3,
+  Menu,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
 } from "lucide-react";
 import {
   LineChart,
@@ -79,6 +84,8 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentInsightIndex, setCurrentInsightIndex] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -87,6 +94,22 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
     }
     fetchData();
   }, [isAuthenticated, params.id, router]);
+
+  // Keyboard navigation for carousel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (insights.length <= 1) return;
+      
+      if (e.key === 'ArrowLeft') {
+        handlePreviousInsight();
+      } else if (e.key === 'ArrowRight') {
+        handleNextInsight();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [insights.length, currentInsightIndex]);
 
   const fetchData = async () => {
     try {
@@ -123,7 +146,9 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
   };
 
   const completedDays = progress.filter((p) => p.completed).length;
-  const completionRate = goal ? Math.round((completedDays / goal.duration) * 100) : 0;
+  const completionRate = goal
+    ? Math.round((completedDays / goal.duration) * 100)
+    : 0;
 
   // Prepare chart data
   const progressChartData = progress
@@ -134,18 +159,33 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
       dayNumber: p.day,
     }));
 
-  const moodTrendData = insights.length > 0 && insights[0].moodTrend
-    ? insights[0].moodTrend.map((m) => ({
-        day: `Day ${m.day}`,
-        mood: (m.score * 100).toFixed(0),
-        score: m.score,
-      }))
-    : [];
+  // Create day-wise motivation data from all insights combined
+  const allMoodData: Array<{
+    day: string;
+    mood: string;
+    score: number;
+    dayNumber: number;
+  }> = [];
+  insights.forEach((insight) => {
+    if (insight.moodTrend) {
+      insight.moodTrend.forEach((m) => {
+        allMoodData.push({
+          day: `Day ${m.day}`,
+          mood: (m.score * 100).toFixed(0),
+          score: m.score,
+          dayNumber: m.day,
+        });
+      });
+    }
+  });
 
-  const motivationData = insights.map((insight) => ({
-    week: `Week ${insight.weekNumber}`,
-    motivation: insight.motivationLevel,
-  }));
+  // Sort by day number and remove duplicates (keep latest)
+  const dayWiseMoodData = allMoodData
+    .sort((a, b) => a.dayNumber - b.dayNumber)
+    .filter(
+      (item, index, self) =>
+        index === self.findIndex((t) => t.dayNumber === item.dayNumber)
+    );
 
   const getMoodIcon = (score: number) => {
     if (score > 0.3) return <Smile className="w-6 h-6 text-green-500" />;
@@ -159,6 +199,22 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
       day: "numeric",
       year: "numeric",
     });
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const handlePreviousInsight = () => {
+    setCurrentInsightIndex((prev) => (prev > 0 ? prev - 1 : insights.length - 1));
+  };
+
+  const handleNextInsight = () => {
+    setCurrentInsightIndex((prev) => (prev < insights.length - 1 ? prev + 1 : 0));
   };
 
   if (isLoading) {
@@ -194,15 +250,18 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav className="border-b bg-card/50 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <Link href={`/goal/${params.id}`}>
               <Button variant="ghost" className="group">
                 <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-                Back to Goal
+                <span className="hidden sm:inline">Back to Goal</span>
+                <span className="sm:hidden">Back</span>
               </Button>
             </Link>
-            <div className="flex items-center space-x-2">
+            
+            {/* Desktop Menu */}
+            <div className="hidden sm:flex items-center space-x-2">
               <Button
                 onClick={handleGenerateInsights}
                 disabled={isGenerating || completedDays === 0}
@@ -212,7 +271,11 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
                   <>
                     <motion.div
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                       className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"
                     />
                     Generating...
@@ -226,7 +289,59 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
               </Button>
               <ThemeToggle />
             </div>
+            
+            {/* Mobile Menu Button */}
+            <div className="flex sm:hidden items-center space-x-2">
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </Button>
+            </div>
           </div>
+          
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="sm:hidden pt-4 pb-2 border-t mt-3"
+            >
+              <Button
+                onClick={() => {
+                  handleGenerateInsights();
+                  setMobileMenuOpen(false);
+                }}
+                disabled={isGenerating || completedDays === 0}
+                variant="gradient"
+                className="w-full"
+              >
+                {isGenerating ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
+                      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"
+                    />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Insights
+                  </>
+                )}
+              </Button>
+            </motion.div>
+          )}
         </div>
       </nav>
 
@@ -243,8 +358,8 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
               <TrendingUp className="w-8 h-8 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold">Insights & Analytics</h1>
-              <p className="text-muted-foreground">{goal.title}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold">Insights & Analytics</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">{goal.title}</p>
             </div>
           </div>
         </motion.div>
@@ -256,7 +371,7 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="glass-card">
+            <Card className="glass-card h-full">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-2">
                   <CheckCircle2 className="w-8 h-8 text-green-500" />
@@ -272,7 +387,7 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="glass-card">
+            <Card className="glass-card h-full">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-2">
                   <Target className="w-8 h-8 text-blue-500" />
@@ -288,13 +403,15 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <Card className="glass-card">
+            <Card className="glass-card h-full">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-2">
                   <Zap className="w-8 h-8 text-orange-500" />
                   <span className="text-3xl font-bold">{insights.length}</span>
                 </div>
-                <p className="text-sm text-muted-foreground">Generated Insights</p>
+                <p className="text-sm text-muted-foreground">
+                  Generated Insights
+                </p>
               </CardContent>
             </Card>
           </motion.div>
@@ -309,37 +426,58 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
             >
-              <Card className="glass-card">
+              <Card className="glass-card h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Activity className="w-5 h-5 text-primary" />
                     <span>Daily Progress</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+                <CardContent className="overflow-x-auto">
+                  <div style={{ minWidth: '400px', width: '100%' }}>
+                    <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={progressChartData}>
                       <defs>
-                        <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
+                        <linearGradient
+                          id="colorCompleted"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="hsl(var(--primary))"
+                            stopOpacity={0.8}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="hsl(var(--primary))"
+                            stopOpacity={0.1}
+                          />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                      <XAxis 
-                        dataKey="day" 
-                        stroke="hsl(var(--muted-foreground))"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="hsl(var(--border))"
+                        opacity={0.3}
                       />
-                      <YAxis 
+                      <XAxis
+                        dataKey="day"
                         stroke="hsl(var(--muted-foreground))"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        domain={[0, (da: number) => da + 1]}
+                      />
+                      <YAxis
+                        stroke="hsl(var(--muted-foreground))"
+                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        domain={[0, 2]}
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '0.5rem',
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "0.5rem",
                         }}
                       />
                       <Area
@@ -352,13 +490,14 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
                       />
                     </AreaChart>
                   </ResponsiveContainer>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
           )}
 
           {/* Mood Trend Chart */}
-          {moodTrendData.length > 0 && (
+          {dayWiseMoodData.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -368,86 +507,113 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Smile className="w-5 h-5 text-primary" />
-                    <span>Mood Trend</span>
+                    <span>Daily Mood</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={moodTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                      <XAxis 
-                        dataKey="day" 
-                        stroke="hsl(var(--muted-foreground))"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    <LineChart data={dayWiseMoodData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="hsl(var(--border))"
+                        opacity={0.3}
                       />
-                      <YAxis 
+                      <XAxis
+                        dataKey="day"
                         stroke="hsl(var(--muted-foreground))"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      />
+                      <YAxis
+                        stroke="hsl(var(--muted-foreground))"
+                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        domain={[
+                          0,
+                          (dataMax: number) => Math.ceil(dataMax * 1.2),
+                        ]}
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '0.5rem',
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "0.5rem",
                         }}
+                        formatter={(value: any) => [`${value}%`, "Mood Score"]}
                       />
                       <Line
                         type="monotone"
                         dataKey="mood"
                         stroke="hsl(var(--primary))"
                         strokeWidth={3}
-                        dot={{ fill: 'hsl(var(--primary))', r: 5 }}
+                        dot={{ fill: "hsl(var(--primary))", r: 5 }}
                         activeDot={{ r: 7 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
+                  <div className="mt-4 text-center text-sm text-muted-foreground">
+                    📊 This chart shows your daily mood and motivation levels
+                    based on your progress notes
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
           )}
 
-          {/* Motivation Level Chart */}
-          {motivationData.length > 0 && (
+          {/* Day-wise Motivation Chart */}
+          {dayWiseMoodData.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
+              transition={{ delay: 0.5 }}
             >
-              <Card className="glass-card">
+              <Card className="glass-card h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Zap className="w-5 h-5 text-primary" />
+                    <BarChart3 className="w-5 h-5 text-primary" />
                     <span>Motivation Levels</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={motivationData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                      <XAxis 
-                        dataKey="week" 
-                        stroke="hsl(var(--muted-foreground))"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                <CardContent className="overflow-x-auto">
+                  <div style={{ minWidth: '400px', width: '100%' }}>
+                    <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={dayWiseMoodData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="hsl(var(--border))"
+                        opacity={0.3}
                       />
-                      <YAxis 
+                      <XAxis
+                        dataKey="day"
                         stroke="hsl(var(--muted-foreground))"
-                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                        domain={[0, 100]}
+                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      />
+                      <YAxis
+                        stroke="hsl(var(--muted-foreground))"
+                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        domain={[
+                          0,
+                          (dataMax: number) => Math.ceil(dataMax * 1.2),
+                        ]}
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '0.5rem',
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "0.5rem",
                         }}
+                        formatter={(value: any) => [`${value}%`, "Motivation"]}
                       />
-                      <Bar 
-                        dataKey="motivation" 
+                      <Bar
+                        dataKey="mood"
                         fill="hsl(var(--primary))"
                         radius={[8, 8, 0, 0]}
                       />
                     </BarChart>
                   </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 text-center text-sm text-muted-foreground">
+                    📈 Track your daily motivation levels based on sentiment
+                    analysis of your progress notes
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -459,25 +625,36 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
           >
-            <Card className="glass-card">
+            <Card className="glass-card h-full">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Target className="w-5 h-5 text-primary" />
                   <span>Overall Completion</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex items-center justify-center">
+              <CardContent className="flex flex-col items-center justify-center">
                 <ResponsiveContainer width="100%" height={300}>
                   <RadialBarChart
                     cx="50%"
                     cy="50%"
                     innerRadius="60%"
                     outerRadius="90%"
-                    data={[{ name: 'Progress', value: completionRate, fill: 'hsl(var(--primary))' }]}
+                    data={[
+                      {
+                        name: "Progress",
+                        value: completionRate,
+                        fill: "hsl(var(--primary))",
+                      },
+                    ]}
                     startAngle={180}
                     endAngle={0}
                   >
-                    <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                    <PolarAngleAxis
+                      type="number"
+                      domain={[0, 100]}
+                      angleAxisId={0}
+                      tick={false}
+                    />
                     <RadialBar
                       background
                       dataKey="value"
@@ -495,39 +672,104 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
                     </text>
                   </RadialBarChart>
                 </ResponsiveContainer>
+                <div className="mt-4 space-y-2 text-center">
+                  <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    <span>{completedDays} of {goal.duration} days completed</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
+                    <Target className="w-4 h-4 text-blue-500" />
+                    <span>{goal.duration - completedDays} days remaining</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
         </div>
 
-        {/* AI Insights */}
+        {/* AI Insights Carousel */}
         {insights.length > 0 ? (
-          <div className="space-y-6">
-            {insights.map((insight, index) => (
+          <div className="relative">
+            {/* Carousel Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Sparkles className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">AI Insights</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {insights.length} {insights.length === 1 ? 'insight' : 'insights'} generated
+                  </p>
+                </div>
+              </div>
+              
+              {/* Navigation Controls */}
+              {insights.length > 1 && (
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handlePreviousInsight}
+                    className="rounded-full"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  <span className="text-sm text-muted-foreground min-w-[60px] text-center">
+                    {currentInsightIndex + 1} / {insights.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleNextInsight}
+                    className="rounded-full"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Carousel Content */}
+            <AnimatePresence mode="wait">
               <motion.div
-                key={insight._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + index * 0.1 }}
+                key={currentInsightIndex}
+                initial={{ opacity: 0, x: 100 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -100 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
               >
                 <Card className="glass-card">
                   <CardHeader>
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between flex-wrap gap-4">
                       <div className="flex items-center space-x-3">
                         <div className="p-2 bg-primary/10 rounded-lg">
-                          <Sparkles className="w-5 h-5 text-primary" />
+                          <Activity className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                          <CardTitle>Week {insight.weekNumber} Analysis</CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {formatDate(insight.generatedAt)}
-                          </p>
+                          <CardTitle className="text-xl">
+                            Week {insights[currentInsightIndex].weekNumber} Analysis
+                          </CardTitle>
+                          <div className="flex items-center space-x-3 mt-1 text-sm text-muted-foreground">
+                            <span>{formatDate(insights[currentInsightIndex].generatedAt)}</span>
+                            <span>•</span>
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-3 h-3" />
+                              <span>{formatTime(insights[currentInsightIndex].generatedAt)}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        {getMoodIcon(insight.moodTrend.length > 0 ? insight.moodTrend[insight.moodTrend.length - 1].score : 0)}
+                        {getMoodIcon(
+                          insights[currentInsightIndex].moodTrend.length > 0
+                            ? insights[currentInsightIndex].moodTrend[
+                                insights[currentInsightIndex].moodTrend.length - 1
+                              ].score
+                            : 0
+                        )}
                         <span className="text-sm font-medium">
-                          {insight.motivationLevel}% motivated
+                          {insights[currentInsightIndex].motivationLevel}% motivated
                         </span>
                       </div>
                     </div>
@@ -536,19 +778,19 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
                     {/* Summary */}
                     <div>
                       <p className="text-foreground leading-relaxed">
-                        {insight.summary}
+                        {insights[currentInsightIndex].summary}
                       </p>
                     </div>
 
                     {/* Highlights */}
-                    {insight.highlights.length > 0 && (
+                    {insights[currentInsightIndex].highlights.length > 0 && (
                       <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                         <div className="flex items-center space-x-2 mb-3">
                           <CheckCircle2 className="w-5 h-5 text-green-500" />
                           <h4 className="font-semibold">Highlights</h4>
                         </div>
                         <ul className="space-y-2">
-                          {insight.highlights.map((highlight, idx) => (
+                          {insights[currentInsightIndex].highlights.map((highlight, idx) => (
                             <li key={idx} className="text-sm flex items-start">
                               <span className="mr-2 text-green-500">•</span>
                               <span>{highlight}</span>
@@ -559,14 +801,14 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
                     )}
 
                     {/* Blockers */}
-                    {insight.blockers.length > 0 && (
+                    {insights[currentInsightIndex].blockers.length > 0 && (
                       <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
                         <div className="flex items-center space-x-2 mb-3">
                           <AlertCircle className="w-5 h-5 text-red-500" />
                           <h4 className="font-semibold">Challenges</h4>
                         </div>
                         <ul className="space-y-2">
-                          {insight.blockers.map((blocker, idx) => (
+                          {insights[currentInsightIndex].blockers.map((blocker, idx) => (
                             <li key={idx} className="text-sm flex items-start">
                               <span className="mr-2 text-red-500">•</span>
                               <span>{blocker}</span>
@@ -577,14 +819,14 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
                     )}
 
                     {/* Recommendations */}
-                    {insight.recommendations.length > 0 && (
+                    {insights[currentInsightIndex].recommendations.length > 0 && (
                       <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
                         <div className="flex items-center space-x-2 mb-3">
                           <Lightbulb className="w-5 h-5 text-blue-500" />
                           <h4 className="font-semibold">Recommendations</h4>
                         </div>
                         <ul className="space-y-2">
-                          {insight.recommendations.map((rec, idx) => (
+                          {insights[currentInsightIndex].recommendations.map((rec, idx) => (
                             <li key={idx} className="text-sm flex items-start">
                               <span className="mr-2 text-blue-500">•</span>
                               <span>{rec}</span>
@@ -596,7 +838,24 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
                   </CardContent>
                 </Card>
               </motion.div>
-            ))}
+            </AnimatePresence>
+
+            {/* Dots Indicator */}
+            {insights.length > 1 && (
+              <div className="flex items-center justify-center space-x-2 mt-6">
+                {insights.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentInsightIndex(index)}
+                    className={`h-2 rounded-full transition-all ${
+                      index === currentInsightIndex
+                        ? "w-8 bg-primary"
+                        : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <motion.div
@@ -624,7 +883,11 @@ export default function InsightsPage({ params }: { params: { id: string } }) {
                       <>
                         <motion.div
                           animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
                           className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"
                         />
                         Generating Insights...

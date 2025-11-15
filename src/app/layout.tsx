@@ -3,9 +3,10 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PageLoader } from "@/components/PageLoader";
+import { AuthInitializer } from "@/components/AuthInitializer";
 import { cn } from "@/lib/utils";
 
-const fontSans = Plus_Jakarta_Sans({ 
+const fontSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
 });
@@ -13,6 +14,9 @@ const fontSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Aivora - AI Goal Intelligence System",
   description: "Plan. Track. Grow. With AI.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -34,6 +38,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange={false}
         >
+          <AuthInitializer />
           <PageLoader />
           {children}
         </ThemeProvider>

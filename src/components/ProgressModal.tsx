@@ -62,6 +62,16 @@ export function ProgressModal({
     }
   };
 
+  const handleClose = () => {
+    // Reset state without showing success animation
+    setCompleted(true);
+    setHoursSpent("");
+    setComment("");
+    setShowSuccess(false);
+    setIsSubmitting(false);
+    onClose();
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -71,12 +81,12 @@ export function ProgressModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={handleClose}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -84,24 +94,24 @@ export function ProgressModal({
               transition={{ type: "spring", duration: 0.5 }}
               className="w-full max-w-lg"
             >
-              <Card className="glass-card shadow-2xl">
-                <CardHeader>
+              <Card className="glass-card shadow-2xl max-h-[95vh] sm:max-h-none overflow-y-auto">
+                <CardHeader className="p-4 sm:p-6">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center space-x-2">
-                      <Sparkles className="w-5 h-5 text-primary" />
+                    <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                       <span>Day {day} Progress</span>
                     </CardTitle>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={onClose}
+                      onClick={handleClose}
                       className="rounded-full"
                     >
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6">
                   <AnimatePresence mode="wait">
                     {!showSuccess ? (
                       <motion.form
@@ -123,7 +133,7 @@ export function ProgressModal({
                           <button
                             type="button"
                             onClick={() => setCompleted(!completed)}
-                            className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all shadow-inner ${
+                            className={`relative inline-flex h-9 w-16 sm:h-8 sm:w-14 items-center rounded-full transition-all shadow-inner ${
                               completed 
                                 ? "bg-primary shadow-primary/20" 
                                 : "bg-gray-300 dark:bg-muted"
@@ -165,7 +175,7 @@ export function ProgressModal({
                                   size="sm"
                                   onClick={() => setHoursSpent(hours.toString())}
                                   disabled={isSubmitting}
-                                  className="text-xs hover:bg-primary/10 hover:text-primary hover:border-primary/50 transition-all"
+                                  className="text-xs sm:text-sm hover:bg-primary/10 hover:text-primary hover:border-primary/50 transition-all"
                                 >
                                   {hours}h
                                 </Button>
@@ -217,12 +227,13 @@ export function ProgressModal({
                           </motion.div>
                         )}
 
-                        <div className="flex justify-end space-x-3 pt-2">
+                        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-2">
                           <Button
                             type="button"
                             variant="ghost"
-                            onClick={onClose}
+                            onClick={handleClose}
                             disabled={isSubmitting}
+                            className="w-full sm:w-auto"
                           >
                             Cancel
                           </Button>
@@ -230,6 +241,7 @@ export function ProgressModal({
                             type="submit"
                             variant="gradient"
                             disabled={isSubmitting || !comment.trim()}
+                            className="w-full sm:w-auto"
                           >
                             {isSubmitting ? (
                               <motion.div
