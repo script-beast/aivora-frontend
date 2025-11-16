@@ -600,7 +600,7 @@ export default function DashboardPage() {
                   <span>LinkedIn</span>
                 </a>
                 <a
-                  href="https://www.aprajapati.vercel.app"
+                  href="https://aprajapati.vercel.app/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-2 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg transition-colors text-sm"
