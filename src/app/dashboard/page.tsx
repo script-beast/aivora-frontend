@@ -67,7 +67,9 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuthStore();
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [progressData, setProgressData] = useState<Record<string, Progress[]>>({});
+  const [progressData, setProgressData] = useState<Record<string, Progress[]>>(
+    {}
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -87,13 +89,13 @@ export default function DashboardPage() {
       const response = await goalAPI.getAll();
       const fetchedGoals = response.goals || [];
       setGoals(fetchedGoals);
-      
+
       // Fetch progress for each goal
       const progressPromises = fetchedGoals.map((goal: Goal) =>
         api.getProgressByGoal(goal._id).catch(() => ({ progress: [] }))
       );
       const progressResults = await Promise.all(progressPromises);
-      
+
       // Create progress map
       const progressMap: Record<string, Progress[]> = {};
       fetchedGoals.forEach((goal: Goal, index: number) => {
@@ -111,7 +113,7 @@ export default function DashboardPage() {
   const calculateProgress = (goal: Goal) => {
     const progress = progressData[goal._id] || [];
     if (!goal.duration || goal.duration === 0) return 0;
-    
+
     const completedDays = progress.filter((p) => p.completed).length;
     return Math.round((completedDays / goal.duration) * 100);
   };
@@ -132,7 +134,7 @@ export default function DashboardPage() {
 
   const calculateStreak = () => {
     if (goals.length === 0) return 0;
-    
+
     // Collect all completed progress with dates
     const allCompletedDates: Date[] = [];
     goals.forEach((goal) => {
@@ -148,30 +150,30 @@ export default function DashboardPage() {
           }
         });
     });
-    
+
     if (allCompletedDates.length === 0) return 0;
-    
+
     // Sort by date descending and remove duplicates
     const uniqueDates = Array.from(
       new Set(allCompletedDates.map((d) => d.getTime()))
     )
       .sort((a, b) => b - a)
       .map((time) => new Date(time));
-    
+
     // Check if streak starts from today or yesterday
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const mostRecentDate = uniqueDates[0];
     const daysSinceRecent = Math.floor(
       (today.getTime() - mostRecentDate.getTime()) / (1000 * 60 * 60 * 24)
     );
-    
+
     // Streak is broken if more than 1 day has passed
     if (daysSinceRecent > 1) return 0;
-    
+
     // Count consecutive days
     let streak = 1;
     for (let i = 1; i < uniqueDates.length; i++) {
@@ -180,14 +182,14 @@ export default function DashboardPage() {
       const dayDiff = Math.floor(
         (prevDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
       );
-      
+
       if (dayDiff === 1) {
         streak++;
       } else {
         break;
       }
     }
-    
+
     return streak;
   };
 
@@ -216,7 +218,11 @@ export default function DashboardPage() {
             </motion.div>
             <div className="flex items-center space-x-2">
               <Link href="/create-goal">
-                <Button variant="gradient" size="sm" className="group hidden sm:flex">
+                <Button
+                  variant="gradient"
+                  size="sm"
+                  className="group hidden sm:flex"
+                >
                   <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform" />
                   New Goal
                 </Button>
@@ -229,7 +235,7 @@ export default function DashboardPage() {
                 size="sm"
                 onClick={() => {
                   logout();
-                  router.push('/login');
+                  router.push("/login");
                 }}
                 className="hidden sm:flex"
               >
@@ -241,7 +247,7 @@ export default function DashboardPage() {
                 size="icon"
                 onClick={() => {
                   logout();
-                  router.push('/login');
+                  router.push("/login");
                 }}
                 className="sm:hidden"
               >
@@ -544,7 +550,7 @@ export default function DashboardPage() {
           </motion.div>
         )}
       </div>
-      
+
       {/* Developer and Project Information - Bottom Section */}
       <footer className="border-t bg-card/30 backdrop-blur-sm mt-16">
         <div className="container mx-auto px-6 py-12">
@@ -561,8 +567,12 @@ export default function DashboardPage() {
                 <h3 className="text-xl font-bold">Developer</h3>
               </div>
               <p className="text-muted-foreground mb-4">
-                <span className="font-semibold text-foreground">Ankit Prajapati</span><br />
-                Full-stack developer passionate about building AI-powered applications
+                <span className="font-semibold text-foreground">
+                  Ankit Prajapati
+                </span>
+                <br />
+                Full-stack developer passionate about building AI-powered
+                applications
               </p>
               <div className="flex flex-wrap gap-3">
                 <a
@@ -575,26 +585,28 @@ export default function DashboardPage() {
                   <span>GitHub</span>
                 </a>
                 <a
-                  href="https://linkedin.com/in/ankitkp01"
+                  href="https://www.linkedin.com/in/aprajapati028/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-2 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg transition-colors text-sm"
                 >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  <svg
+                    className="w-4 h-4"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                   </svg>
                   <span>LinkedIn</span>
                 </a>
                 <a
-                  href="https://leetcode.com/ankitkp01"
+                  href="https://www.aprajapati.vercel.app"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-2 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg transition-colors text-sm"
                 >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M13.483 0a1.374 1.374 0 0 0-.961.438L7.116 6.226l-3.854 4.126a5.266 5.266 0 0 0-1.209 2.104 5.35 5.35 0 0 0-.125.513 5.527 5.527 0 0 0 .062 2.362 5.83 5.83 0 0 0 .349 1.017 5.938 5.938 0 0 0 1.271 1.818l4.277 4.193.039.038c2.248 2.165 5.852 2.133 8.063-.074l2.396-2.392c.54-.54.54-1.414.003-1.955a1.378 1.378 0 0 0-1.951-.003l-2.396 2.392a3.021 3.021 0 0 1-4.205.038l-.02-.019-4.276-4.193c-.652-.64-.972-1.469-.948-2.263a2.68 2.68 0 0 1 .066-.523 2.545 2.545 0 0 1 .619-1.164L9.13 8.114c1.058-1.134 3.204-1.27 4.43-.278l3.501 2.831c.593.48 1.461.387 1.94-.207a1.384 1.384 0 0 0-.207-1.943l-3.5-2.831c-2.365-1.914-5.916-1.594-7.97.781l-4.277 4.126c-.818.813-1.24 1.913-1.178 3.023.044.767.315 1.481.784 2.056l4.277 4.193c2.248 2.165 5.852 2.133 8.063-.074l2.396-2.392a1.378 1.378 0 0 0-.003-1.955 1.378 1.378 0 0 0-1.951-.003l-2.396 2.392a3.021 3.021 0 0 1-4.205.038l-.02-.019-4.276-4.193c-.652-.64-.972-1.469-.948-2.263a2.68 2.68 0 0 1 .066-.523c.13-.465.359-.896.652-1.164L13.022.438A1.374 1.374 0 0 0 13.483 0z"/>
-                  </svg>
-                  <span>LeetCode</span>
+                  <Info className="w-4 h-4" />
+                  <span>Profile</span>
                 </a>
               </div>
             </div>
@@ -606,7 +618,9 @@ export default function DashboardPage() {
                 <h3 className="text-xl font-bold">About Aivora</h3>
               </div>
               <p className="text-muted-foreground mb-4">
-                An intelligent goal-tracking platform powered by AI to help you achieve your learning objectives with personalized roadmaps, progress tracking, and AI-generated insights.
+                An intelligent goal-tracking platform powered by AI to help you
+                achieve your learning objectives with personalized roadmaps,
+                progress tracking, and AI-generated insights.
               </p>
               <div className="space-y-3">
                 <div>
@@ -646,10 +660,11 @@ export default function DashboardPage() {
               </div>
             </div>
           </motion.div>
-          
+
           <div className="text-center mt-8 pt-8 border-t border-border">
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Aivora. Built with ❤️ by Ankit Prajapati
+              © {new Date().getFullYear()} Aivora. Built with ❤️ by Ankit
+              Prajapati
             </p>
           </div>
         </div>
